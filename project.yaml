@@ -1,8 +1,9 @@
 version: '4.0'
 
 actions:
-  generate_dataset:
-    run: ehrql:v1 generate-dataset analysis/dataset_definition.py --output output/dataset.csv.gz
+  2020_data:
+    run: ehrql:v1 generate-dataset analysis/dataset_definition.py --output output/dataset_2020.csv.gz -- 20200101 20201231
     outputs:
       highly_sensitive:
-        dataset: output/dataset.csv.gz
+        dataset: output/dataset_2020.csv.gz
+
