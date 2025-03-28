@@ -19,7 +19,7 @@ dataset.configure_dummy_data(population_size=1000)
 # Inclusion/exclusion criteria:
 
 ## Include people alive
-was_alive = patients.date_of_death.is_after(start_date) | patients.date_of_death.is_null()
+was_alive = patients.date_of_death.is_on_or_after(start_date) | patients.date_of_death.is_null()
 
 ## Include people registered with a TPP practice
 has_registration = practice_registrations.for_patient_on(
@@ -27,7 +27,7 @@ has_registration = practice_registrations.for_patient_on(
 ).exists_for_patient()
 
 ## Exclude people >110 years due to risk of incorrectly recorded age;
-has_possible_age= patients.age_on(start_date) < 110
+has_possible_age= (patients.age_on(start_date)) < 110 & (patients.age_on(start_date) >=0)
 
 ## Exclude people with non-male or female sex due to disclosure risk;
 non_disclosive_sex= (patients.sex == "male") | (patients.sex == "female")
