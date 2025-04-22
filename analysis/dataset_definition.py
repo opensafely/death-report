@@ -1,12 +1,10 @@
-from ehrql import  years, when, create_dataset, case, minimum_of
+from ehrql import  when, create_dataset, case, minimum_of
 from ehrql.tables.tpp import patients, practice_registrations, ons_deaths, addresses
-
-from sys import argv
-from datetime import datetime
 
 # initialise dataset
 dataset = create_dataset()
 dataset.configure_dummy_data(population_size=1000)
+
 
 #Dates 
 start_date = "2005-01-01"
@@ -23,6 +21,7 @@ year_start_DoD = earliest_DoD.to_first_of_year()
 
 ## Include people alive
 was_alive = patients.date_of_death.is_after(year_start_DoD) | patients.date_of_death.is_null() | ons_deaths.date.is_after(year_start_DoD)| ons_deaths.date.is_null()
+patients.date_of_birth
 
 ## Include people registered with a TPP practice
 has_registration = practice_registrations.for_patient_on(year_start_DoD).exists_for_patient()
