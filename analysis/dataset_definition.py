@@ -16,18 +16,17 @@ earliest_DoD = minimum_of(
 
 year_start_DoD = earliest_DoD.to_first_of_year()
 
-
 # Inclusion/exclusion criteria:
 
 ## Include people alive
-was_alive = patients.date_of_death.is_after(year_start_DoD) | patients.date_of_death.is_null() | ons_deaths.date.is_after(year_start_DoD)| ons_deaths.date.is_null()
-patients.date_of_birth
+#was_alive = patients.date_of_death.is_after(year_start_DoD) | patients.date_of_death.is_null() | ons_deaths.date.is_after(year_start_DoD) | ons_deaths.date.is_null()
+#patients.date_of_birth
 
 ## Include people registered with a TPP practice
 has_registration = practice_registrations.for_patient_on(year_start_DoD).exists_for_patient()
 
 ## Exclude people >110 years due to risk of incorrectly recorded age;
-has_possible_age= (patients.age_on(year_start_DoD) < 110) & (patients.age_on(year_start_DoD) > 0)
+has_possible_age= ((patients.age_on(year_start_DoD) < 110) & (patients.age_on(year_start_DoD) > 0)) | (patients.date_of_birth.year == year_start_DoD.year)
 
 ## Exclude people with non-male or female sex due to disclosure risk;
 non_disclosive_sex= (patients.sex == "male") | (patients.sex == "female")
@@ -37,7 +36,7 @@ died_during_study = patients.date_of_death.is_after(start_date) | ons_deaths.dat
 
 # define dataset poppulation
 dataset.define_population(
-    was_alive & 
+    #was_alive & 
     has_registration & 
     has_possible_age & 
     non_disclosive_sex &
@@ -56,6 +55,7 @@ dataset.ons_death_date = ons_deaths.date
 ## Sub-analysis variables
 
 ### Age band
+dataset.date_of_birth = patients.date_of_birth
 age = patients.age_on(year_start_DoD)
 
 dataset.age_band = case(

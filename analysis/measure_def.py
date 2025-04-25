@@ -26,7 +26,7 @@ was_alive_ONS = ons_deaths.date.is_after(INTERVAL.start_date) | ons_deaths.date.
 has_registration = practice_registrations.for_patient_on(INTERVAL.start_date).exists_for_patient()
 
 ## Exclude people >110 years due to risk of incorrectly recorded age
-has_possible_age= (patients.age_on(INTERVAL.start_date) < 110) & (patients.age_on(INTERVAL.start_date) > 0)
+has_possible_age= ((patients.age_on(INTERVAL.start_date) < 110) & (patients.age_on(INTERVAL.start_date) > 0)) | (patients.date_of_birth.year == INTERVAL.start_date.year)
 
 ## Exclude people with non-male or female sex due to disclosure risk
 non_disclosive_sex= (patients.sex == "male") | (patients.sex == "female")
