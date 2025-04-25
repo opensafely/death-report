@@ -1,8 +1,17 @@
 version: '4.0'
 
 actions:
-  generate_dataset:
-    run: ehrql:v1 generate-dataset analysis/dataset_definition.py --output output/dataset.csv.gz
+#Dataset for diff time
+  dataset_def:
+    run: ehrql:v1 generate-dataset analysis/dataset_definition.py --output output/dataset_death.csv.gz
     outputs:
       highly_sensitive:
-        dataset: output/dataset.csv.gz
+        dataset: output/dataset_death.csv.gz
+
+# Measures
+  measures_overall:
+    run: ehrql:v1 generate-measures analysis/measure_def.py 
+      --output output/measures/measures_overall.csv
+    outputs:
+      moderately_sensitive:
+        measure_csv: output/measures/measures_overall.csv
