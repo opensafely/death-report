@@ -55,7 +55,7 @@ intervals = years(20).starting_on("2005-01-01")
 ## Age 
 age = patients.age_on(INTERVAL.start_date)
 age_band = case(
-    when((age >= 0) & (age < 45)).then("0-44"),
+    when((age < 45)).then("0-44"),
     when((age >= 45) & (age < 65)).then("45-64"),
     when((age >= 65) & (age < 75)).then("65-74"),
     when((age >= 75) & (age < 85)).then("75-84"),

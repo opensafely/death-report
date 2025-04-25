@@ -59,7 +59,7 @@ dataset.date_of_birth = patients.date_of_birth
 age = patients.age_on(year_start_DoD)
 
 dataset.age_band = case(
-    when((age >= 0) & (age < 45)).then("0-44"),
+    when((age < 45)).then("0-44"),
     when((age >= 45) & (age < 65)).then("45-64"),
     when((age >= 65) & (age < 75)).then("65-74"),
     when((age >= 75) & (age < 85)).then("75-84"),
