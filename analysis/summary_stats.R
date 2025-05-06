@@ -9,7 +9,7 @@ library("here")
 library("skimr")
 
 ## Create output directory
-output_dir <- here("output", "report")
+output_dir <- here("output", "DoD")
 fs::dir_create(output_dir)
 
 # Import processed data ----

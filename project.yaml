@@ -28,8 +28,8 @@ actions:
         measure_csv: output/measures/measures_overall.csv
 
   measures_by_practice:
-    run: ehrql:v1 generate-measures analysis/measures_practice.py 
+    run: ehrql:v1 generate-measures analysis/measure_practice.py 
       --output output/measures/measures_by_practice.csv
     outputs:
-      moderately_sensitive:
+      highly_sensitive:
         measure_csv: output/measures/measures_by_practice.csv
