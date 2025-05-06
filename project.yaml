@@ -14,7 +14,8 @@ actions:
     needs: [dataset_death_date_diff]
     outputs:
       moderately_sensitive:
-        csv: output/DoD/summary_stats_DoD.csv
+        continuous: output/DoD/summary_stats_DoD.csv
+        categorical: output/DoD/table_freq_DoD.csv
 
 
 
