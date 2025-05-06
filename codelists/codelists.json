@@ -1,3 +1,10 @@
 {
-  "files": {}
+  "files": {
+    "opensafely-ethnicity-snomed-0removed.csv": {
+      "id": "opensafely/ethnicity-snomed-0removed/22911876",
+      "url": "https://www.opencodelists.org/codelist/opensafely/ethnicity-snomed-0removed/22911876/",
+      "downloaded_at": "2025-04-29 14:01:55.771409Z",
+      "sha": "d95a2f826299563aa57f6fa99009e6e13a65151b"
+    }
+  }
 }

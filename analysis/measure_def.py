@@ -7,8 +7,8 @@
 #   University of Oxford, 2025
 #####################################################################
 
-from ehrql import INTERVAL, create_measures, years, case, when
-from ehrql.tables.tpp import patients, practice_registrations, ons_deaths, addresses
+from ehrql import INTERVAL, create_measures, years, case, when, codelist_from_csv
+from ehrql.tables.tpp import patients, practice_registrations, ons_deaths, addresses, clinical_events
 
  
 ##########
@@ -61,14 +61,46 @@ age_band = case(
     when((age >= 75) & (age < 85)).then("75-84"),
     when(age >= 85).then("85+"),
     )
-## Practice
-practice = practice_registrations.for_patient_on(INTERVAL.start_date).practice_pseudo_id
+
 ## Place of death
 death_place = ons_deaths.place
 ## Practice region
 region = practice_registrations.for_patient_on(INTERVAL.start_date).practice_nuts1_region_name
 ## Rurality
 rural_urban = addresses.for_patient_on(INTERVAL.start_date).rural_urban_classification
+
+#IMD
+imd = addresses.for_patient_on(INTERVAL.start_date).imd_rounded
+
+IMD_q10 = case(
+        when((imd >= 0) & (imd < int(32844 * 1 / 10))).then("1 (most deprived)"),
+        when(imd < int(32844 * 2 / 10)).then("2"),
+        when(imd < int(32844 * 3 / 10)).then("3"),
+        when(imd < int(32844 * 4 / 10)).then("4"),
+        when(imd < int(32844 * 5 / 10)).then("5"),
+        when(imd < int(32844 * 6 / 10)).then("6"),
+        when(imd < int(32844 * 7 / 10)).then("7"),
+        when(imd < int(32844 * 8 / 10)).then("8"),
+        when(imd < int(32844 * 9 / 10)).then("9"),
+        when(imd >= int(32844 * 9 / 10)).then("10 (least deprived)"),
+        otherwise="unknown"
+)
+
+
+#Ethnicity
+# Ethnicity
+
+ethnicity5 = codelist_from_csv(
+  "codelists/opensafely-ethnicity-snomed-0removed.csv",
+  column="code",
+  category_column="Label_6", # it's 6 because there is an additional "6 - Not stated" but this is not represented in SNOMED, instead corresponding to no ethnicity code
+)
+
+ethnicity = clinical_events.where(
+        clinical_events.snomedct_code.is_in(ethnicity5)
+    ).sort_by(
+        clinical_events.date
+    ).last_for_patient().snomedct_code.to_category(ethnicity5)
 
 
 # Create meassures
@@ -97,16 +129,7 @@ measures.define_measure(
     },
 )
 
-## Practice (anonymous)
-measures.define_measure(
-    "GP_mortality_practice",
-    numerator= GP_death_in_interval,
-    denominator= GP_denominator,
-    intervals=intervals,
-    group_by={
-        "practice": practice,
-    },
-)
+
 ## Place of death
 measures.define_measure(
     "GP_mortality_death_place",
@@ -138,6 +161,26 @@ measures.define_measure(
     },
 )
 
+## IMD_q10
+measures.define_measure(
+    "GP_mortality_IMD_q10",
+    numerator= GP_death_in_interval,
+    denominator= GP_denominator,
+    intervals=intervals,
+    group_by={
+        "IMD_q10": IMD_q10,
+    },
+)
+## Ethnicity
+measures.define_measure(
+    "GP_mortality_ethnicity",
+    numerator= GP_death_in_interval,
+    denominator= GP_denominator,
+    intervals=intervals,
+    group_by={
+        "ethnicity": ethnicity,
+    },
+)
 
 ###################
 # ONS date of death #
@@ -162,16 +205,6 @@ measures.define_measure(
     },
 )
 
-## Practice (anonymous)
-measures.define_measure(
-    "ONS_mortality_practice",
-    numerator= ONS_death_in_interval,
-    denominator= ONS_denominator,
-    intervals=intervals,
-    group_by={
-        "practice": practice,
-    },
-)
 ## Place of death
 measures.define_measure(
     "ONS_mortality_death_place",
@@ -182,16 +215,7 @@ measures.define_measure(
         "death_place": death_place,
     },
 )
-## Practice region
-measures.define_measure(
-    "ONS_mortality_region",
-    numerator= ONS_death_in_interval,
-    denominator= ONS_denominator,
-    intervals=intervals,
-    group_by={
-        "region": region,
-    },
-)
+
 ## Rurality 
 measures.define_measure(
     "ONS_mortality_rural_urban",
@@ -203,6 +227,26 @@ measures.define_measure(
     },
 )
 
+## IMD_q10
+measures.define_measure(
+    "ONS_mortality_IMD_q10",
+    numerator= ONS_death_in_interval,
+    denominator= ONS_denominator,
+    intervals=intervals,
+    group_by={
+        "IMD_q10": IMD_q10,
+    },
+)
+## Ethnicity
+measures.define_measure(
+    "ONS_mortality_ethnicity",
+    numerator= ONS_death_in_interval,
+    denominator= ONS_denominator,
+    intervals=intervals,
+    group_by={
+        "ethnicity": ethnicity,
+    },
+)
 ###################
 # Global date of death #
 ###################
@@ -226,16 +270,7 @@ measures.define_measure(
     },
 )
 
-## Practice (anonymous)
-measures.define_measure(
-    "global_mortality_practice",
-    numerator= global_death_in_interval,
-    denominator= global_denominator,
-    intervals=intervals,
-    group_by={
-        "practice": practice,
-    },
-)
+
 ## Place of death
 measures.define_measure(
     "global_mortality_death_place",
@@ -267,7 +302,26 @@ measures.define_measure(
     },
 )
 
-
+## IMD_q10
+measures.define_measure(
+    "global_mortality_IMD_q10",
+    numerator= global_death_in_interval,
+    denominator= global_denominator,
+    intervals=intervals,
+    group_by={
+        "IMD_q10": IMD_q10,
+    },
+)
+## Ethnicity
+measures.define_measure(
+    "global_mortality_ethnicity",
+    numerator= global_death_in_interval,
+    denominator= global_denominator,
+    intervals=intervals,
+    group_by={
+        "ethnicity": ethnicity,
+    },
+)
 
 
 
