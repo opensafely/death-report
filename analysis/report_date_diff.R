@@ -13,7 +13,7 @@ output_dir <- here("output", "report")
 fs::dir_create(output_dir)
 
 # Import processed data ----
-dataset0 <- read_csv("output/dataset_death_date_diff.csv") %>% 
+dataset0 <- read_csv("output/dataset_death_date_diff.csv.gz") %>% 
   mutate(
     TPP_death_date = as.Date(TPP_death_date),
     ons_death_date = as.Date(ons_death_date),
