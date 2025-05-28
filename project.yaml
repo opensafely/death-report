@@ -17,6 +17,15 @@ actions:
         continuous: output/DoD/summary_stats_DoD.csv
         categorical: output/DoD/table_freq_DoD.csv
 
+  table_DoD:
+    run: r:v2 analysis/Table_DoD.R
+      --output output/report/*.csv 
+    needs: [dataset_death_date_diff]
+    outputs:
+      moderately_sensitive:
+        categorical1: output/report/collate_death_source_table.csv
+        categorical2: output/report/collate_DoD_diff_table.csv
+
 
 
 
@@ -27,6 +36,14 @@ actions:
     outputs:
       moderately_sensitive:
         measure_csv: output/measures/measures_overall.csv
+  
+  table_measure_rate:
+    run: r:v2 analysis/Table_measure_rate.R
+      --output output/report/*.csv 
+    needs: [measures_overall]
+    outputs:
+      moderately_sensitive:
+        categorical: output/report/collate_measures_rate_table.csv
 
   measures_by_practice:
     run: ehrql:v1 generate-measures analysis/measure_practice.py 
@@ -34,3 +51,4 @@ actions:
     outputs:
       highly_sensitive:
         measure_csv: output/measures/measures_by_practice.csv
+

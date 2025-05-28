@@ -1,0 +1,237 @@
+# Preliminaries ----
+
+# Import libraries
+library("tidyverse")
+library("dtplyr")
+library("lubridate")
+library("glue")
+library("here")
+
+
+## Create output directory
+output_dir <- here("output", "report")
+fs::dir_create(output_dir)
+
+# Import processed data ----
+dataset0 <- read_csv("output/dataset_death_date_diff.csv.gz") %>% 
+  mutate(
+    TPP_death_date = as.Date(TPP_death_date),
+    ons_death_date = as.Date(ons_death_date),
+    date_of_birth = as.Date(date_of_birth),
+    age_band = as.factor(age_band),
+    practice = as.factor(practice),
+    ons_death_place = as.factor(ons_death_place),
+    region = as.factor(region),
+    IMD_q10 = as.factor(IMD_q10),
+    ethnicity = as.factor(ethnicity)
+    )
+  
+
+# Create variables
+DoD_diff_dataset <- dataset0 %>%
+  mutate(
+    DoD_min = pmin(TPP_death_date, ons_death_date, na.rm = TRUE),
+    diff_DoD = TPP_death_date - ons_death_date,
+    TPP_death = case_when(!is.na(TPP_death_date) ~ "yes",
+                          TRUE ~ NA_character_),
+    ONS_death = case_when(!is.na(ons_death_date) ~ "yes",
+                          TRUE ~ NA_character_),
+    rural_urb_recode = case_when(
+      rural_urban < 5 ~ "urban",
+      rural_urban >= 5 ~ "rural",
+      TRUE ~ NA_character_
+    ),
+    ONS_year = year(ons_death_date)
+  ) %>%
+  mutate(
+    ONS_or_TPP = case_when(
+      !is.na(ONS_death) & !is.na(TPP_death) ~ "ONS & TPP",!is.na(ONS_death) &
+        is.na(TPP_death) ~ "ONS",!is.na(TPP_death) &
+        is.na(ONS_death) ~ "TPP",
+      is.na(TPP_death) & is.na(ONS_death) ~ NA_character_
+    ),
+    DoD_groups = case_when(
+      diff_DoD == 0 ~ "0",
+      
+      diff_DoD >= 1 & diff_DoD <= 7 ~ "1-7",
+      diff_DoD >= 8 & diff_DoD <= 31 ~ "8-31",
+      diff_DoD >= 32 & diff_DoD <=365 ~ "32-365",
+      diff_DoD >= 366 ~ "366+",
+      
+      diff_DoD <= -1 & diff_DoD >= -7 ~ "-1 to -7",
+      diff_DoD <= -8 & diff_DoD >= -31 ~ "-8 to -31",
+      diff_DoD <= -32 & diff_DoD <= -365  ~ "-32 to -365",
+      diff_DoD >= -366 ~ "-366+",
+      
+      TRUE ~ NA_character_
+    )
+  )
+
+
+##### 1- Diff DoD----------------------------------------------
+
+# Table key indicators by year
+table_DoD_general <- DoD_diff_dataset %>%
+  filter(ONS_or_TPP == "ONS & TPP") %>%
+  group_by(
+    ONS_year
+  ) %>% 
+  mutate(
+    GP_ONS_annual_deaths = n()
+  ) %>% 
+  ungroup() %>% 
+  group_by(ONS_year,  DoD_groups , GP_ONS_annual_deaths) %>%
+  summarise(count_by_group_DoD = n()) %>% 
+  mutate(
+    group_var = "general population",
+    group_value = "general population"
+  )
+
+
+#Date diff by group
+summarise_DoD_by_group <- function(data, group_var) {
+  group_var_name <- deparse(substitute(group_var))
+  
+  data %>%
+    filter(ONS_or_TPP == "ONS & TPP") %>%
+    group_by(ONS_year, {{ group_var }}) %>%
+    mutate(GP_ONS_annual_deaths = n()) %>%
+    ungroup() %>%
+    group_by(ONS_year, {{ group_var }}, DoD_groups, GP_ONS_annual_deaths) %>%
+    summarise(count_by_group_DoD = n(), .groups = "drop") %>%
+    mutate(
+      group_var = group_var_name,
+      group_value = as.character({{ group_var }})
+    ) %>%
+    select(ONS_year, DoD_groups, GP_ONS_annual_deaths, count_by_group_DoD, group_var, group_value)
+}
+
+#tables by group
+
+DoD_by_age <- summarise_DoD_by_group(DoD_diff_dataset, age_band)
+
+# DoD_by_practice <- summarise_DoD_by_group(DoD_diff_dataset, practice)
+
+DoD_by_ons_death_place <- summarise_DoD_by_group(DoD_diff_dataset, ons_death_place)
+
+DoD_by_region <- summarise_DoD_by_group(DoD_diff_dataset, region)
+
+DoD_by_rural_urban <- summarise_DoD_by_group(DoD_diff_dataset, rural_urban)
+
+DoD_by_IMD_q10 <- summarise_DoD_by_group(DoD_diff_dataset, IMD_q10)
+
+DoD_by_ethnicity <- summarise_DoD_by_group(DoD_diff_dataset, ethnicity)
+
+
+collate_DoD_diff_table <- rbind(table_DoD_general, DoD_by_age, DoD_by_rural_urban, DoD_by_ons_death_place, DoD_by_region, DoD_by_IMD_q10, DoD_by_ethnicity)
+
+write.csv(collate_DoD_diff_table, here::here("output", "report", "collate_DoD_diff_table.csv"))
+
+# 2- Table by source --------------------------------------------------------------------------------------
+table_source_general <- DoD_diff_dataset %>%
+  group_by(ONS_year) %>%
+  mutate(total = n()) %>% 
+  group_by(ONS_year, ONS_or_TPP, total) %>%
+  summarise(
+    count = n(),
+    perc_source = count / unique(total) * 100,
+    .groups = "drop"
+  ) %>%
+  mutate(
+    group_var = "general population",
+    group_value = "general population"
+  ) %>%
+  select(ONS_year, ONS_or_TPP, count, perc_source, group_var, group_value)
+
+
+table_source_by_subgroup <- function(data, group_var) {
+  group_var_name <- deparse(substitute(group_var))
+  
+  data %>%
+    filter(ONS_year > 2009) %>%
+    group_by(ONS_year, {{ group_var }}) %>%
+    mutate(total = n()) %>%
+    group_by(ONS_year, {{ group_var }}, ONS_or_TPP, total) %>%
+    summarise(
+      count = n(),
+      perc_source = count / unique(total) * 100,
+      .groups = "drop"
+    ) %>%
+    mutate(
+      group_var = group_var_name,
+      group_value = as.character({{ group_var }})
+    ) %>%
+    select(ONS_year, ONS_or_TPP, count, perc_source, group_var, group_value)
+}
+
+
+table_source_age       <- table_source_by_subgroup(DoD_diff_dataset, age_band)
+table_source_ethnicity <- table_source_by_subgroup(DoD_diff_dataset, ethnicity)
+table_source_region    <- table_source_by_subgroup(DoD_diff_dataset, region)
+table_source_place     <- table_source_by_subgroup(DoD_diff_dataset, ons_death_place)
+table_source_urban     <- table_source_by_subgroup(DoD_diff_dataset, rural_urban)
+table_source_IMD       <- table_source_by_subgroup(DoD_diff_dataset, IMD_q10)
+
+
+collate_death_source_table <- bind_rows(
+  table_source_general,                                   
+  table_source_age,
+  table_source_ethnicity,
+  table_source_region,
+  table_source_place,
+  table_source_urban,
+  table_source_IMD
+)
+
+ 
+ write.csv(collate_death_source_table, here::here("output", "report", "collate_death_source_table.csv"))
+# # -----------------------------------------------------------------------------------------
+# 
+# #Line plot number of death
+# ggplot(table_source, aes(x = ONS_year, y = count, color = ONS_or_TPP, group = ONS_or_TPP)) +
+#   geom_line(linewidth = 1) +
+#   scale_color_viridis_d(name = "Source") +
+#   labs(
+#     x = "Year of Death",
+#     y = "Number of Deaths",
+#     title = "Death Records by Source (ONS, TPP, or Both)"
+#   ) +
+#   theme_minimal(base_size = 14)
+# 
+# #Stock bar number death
+# ggplot(table_source, aes(x = factor(ONS_year), y = count, fill = ONS_or_TPP)) +
+#   geom_bar(stat = "identity") +
+#   scale_fill_viridis_d(name = "Source") +
+#   labs(
+#     x = "Year of Death (ONS)",
+#     y = "Number of Deaths",
+#     title = "Deaths by Year and Source (ONS, TPP or Both)"
+#   ) +
+#   theme_minimal(base_size = 14) +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+# 
+# # Line percentage -> best
+# ggplot(table_source, aes(x = ONS_year, y = perc_source, color = ONS_or_TPP, group = ONS_or_TPP)) +
+#   geom_line(linewidth = 1) +
+#   scale_color_viridis_d(name = "Source") +
+#   labs(
+#     x = "Year of Death",
+#     y = "Number of Deaths",
+#     title = "Death Records by Source (ONS, TPP, or Both)"
+#   ) +
+#   theme_minimal(base_size = 14)
+# 
+# 
+# # % days diff
+# table_perc_DoD <- DoD_diff_dataset %>%
+#   filter(ONS_or_TPP == "ONS & TPP") %>% 
+#   group_by(ONS_year) %>% 
+#   mutate (total = n()) %>% 
+#   ungroup() %>% 
+#   group_by(ONS_year, DoD_groups) %>% 
+#   summarise(
+#     DoD_group_count = n(),
+#     DoD_group_perc = n()/total*100
+#   ) %>% 
+#   unique()
+# 
