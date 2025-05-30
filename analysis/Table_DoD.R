@@ -45,9 +45,9 @@ DoD_diff_dataset <- dataset0 %>%
   ) %>%
   mutate(
     ONS_or_TPP = case_when(
-      !is.na(ONS_death) & !is.na(TPP_death) ~ "ONS & TPP",!is.na(ONS_death) &
-        is.na(TPP_death) ~ "ONS",!is.na(TPP_death) &
-        is.na(ONS_death) ~ "TPP",
+      !is.na(ONS_death) & !is.na(TPP_death) ~ "ONS & TPP",
+      !is.na(ONS_death) & is.na(TPP_death) ~ "ONS",
+      !is.na(TPP_death) & is.na(ONS_death) ~ "TPP",
       is.na(TPP_death) & is.na(ONS_death) ~ NA_character_
     ),
     DoD_groups = case_when(
@@ -67,6 +67,14 @@ DoD_diff_dataset <- dataset0 %>%
     )
   )
 
+# Rounding function
+
+rounding <- function(vars) {
+  case_when(vars == 0 ~ 0,
+            vars > 7 ~ round(vars / 5) * 5)
+}
+
+
 
 ##### 1- Diff DoD----------------------------------------------
 
@@ -77,11 +85,11 @@ table_DoD_general <- DoD_diff_dataset %>%
     ONS_year
   ) %>% 
   mutate(
-    GP_ONS_annual_deaths = n()
+    GP_ONS_annual_deaths = rounding(n())
   ) %>% 
   ungroup() %>% 
   group_by(ONS_year,  DoD_groups , GP_ONS_annual_deaths) %>%
-  summarise(count_by_group_DoD = n()) %>% 
+  summarise(count_by_group_DoD = rounding(n())) %>% 
   mutate(
     group_var = "general population",
     group_value = "general population"
@@ -95,10 +103,10 @@ summarise_DoD_by_group <- function(data, group_var) {
   data %>%
     filter(ONS_or_TPP == "ONS & TPP") %>%
     group_by(ONS_year, {{ group_var }}) %>%
-    mutate(GP_ONS_annual_deaths = n()) %>%
+    mutate(GP_ONS_annual_deaths = rounding(n())) %>%
     ungroup() %>%
     group_by(ONS_year, {{ group_var }}, DoD_groups, GP_ONS_annual_deaths) %>%
-    summarise(count_by_group_DoD = n(), .groups = "drop") %>%
+    summarise(count_by_group_DoD = rounding(n()), .groups = "drop") %>%
     mutate(
       group_var = group_var_name,
       group_value = as.character({{ group_var }})
@@ -130,18 +138,17 @@ write.csv(collate_DoD_diff_table, here::here("output", "report", "collate_DoD_di
 # 2- Table by source --------------------------------------------------------------------------------------
 table_source_general <- DoD_diff_dataset %>%
   group_by(ONS_year) %>%
-  mutate(total = n()) %>% 
+  mutate(total = rounding(n())) %>% 
   group_by(ONS_year, ONS_or_TPP, total) %>%
   summarise(
-    count = n(),
-    perc_source = count / unique(total) * 100,
+    count = rounding(n()),
     .groups = "drop"
   ) %>%
   mutate(
     group_var = "general population",
     group_value = "general population"
   ) %>%
-  select(ONS_year, ONS_or_TPP, count, perc_source, group_var, group_value)
+  select(ONS_year, ONS_or_TPP, count, group_var, group_value)
 
 
 table_source_by_subgroup <- function(data, group_var) {
@@ -153,15 +160,14 @@ table_source_by_subgroup <- function(data, group_var) {
     mutate(total = n()) %>%
     group_by(ONS_year, {{ group_var }}, ONS_or_TPP, total) %>%
     summarise(
-      count = n(),
-      perc_source = count / unique(total) * 100,
+      count = rounding(n()),
       .groups = "drop"
     ) %>%
     mutate(
       group_var = group_var_name,
       group_value = as.character({{ group_var }})
     ) %>%
-    select(ONS_year, ONS_or_TPP, count, perc_source, group_var, group_value)
+    select(ONS_year, ONS_or_TPP, count, group_var, group_value)
 }
 
 
