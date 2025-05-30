@@ -13,13 +13,26 @@ dataset0 <- read_csv("output/measures/measures_overall.csv",
                                       )
                      )
 
+
+# Rounding function
+
+rounding <- function(vars) {
+  case_when(vars == 0 ~ 0,
+            vars > 7 ~ round(vars / 5) * 5)
+}
+
+
+
 # Prepare data
 dataset_measure <- dataset0 %>% 
+  select(-ratio) %>% 
   mutate(
+    numerator = rounding(numerator),
+    denominator = rounding(denominator),
     subgroup_var = str_extract(measure, "(?<=mortality_).*"),
     data_source = str_extract(measure, ".*(?=_mortality)"),
     year = year(interval_start),
-    m_rate_10M = ratio * 10000,
+#    m_rate_10M = ratio * 10000,
     subgroup_cat = case_when(
       str_detect(measure, "mortality_age_band") ~ as.character(age_band),
       str_detect(measure, "mortality_death_place") ~ as.character(death_place),
@@ -38,30 +51,30 @@ dataset_measure <- dataset0 %>%
 
 table_overall <- dataset_measure %>% 
   filter(subgroup_var == "overall") %>% 
-  select(year, data_source, numerator, denominator, m_rate_10M) %>% 
-  pivot_longer(cols = c(numerator, denominator, m_rate_10M),
+  select(year, data_source, numerator, denominator) %>% 
+  pivot_longer(cols = c(numerator, denominator),
                names_to = "metric",
                values_to = "value") %>%
   unite("source_metric", data_source, metric) %>%
   pivot_wider(names_from = source_metric,
-              values_from = value) %>% 
-  mutate(
-    GP_ONS_ratio = GP_numerator/ ONS_numerator
-  )
+              values_from = value) # %>% 
+  # mutate(
+  #   GP_ONS_ratio = GP_numerator/ ONS_numerator
+  # )
 
 
 # Table subgroups by rate/deaths by year
 collate_measures_rate_table <- dataset_measure %>% 
-  select(subgroup_var, subgroup_cat, year, data_source, numerator, denominator, m_rate_10M) %>% 
-  pivot_longer(cols = c(numerator, denominator, m_rate_10M),
+  select(subgroup_var, subgroup_cat, year, data_source, numerator, denominator) %>% 
+  pivot_longer(cols = c(numerator, denominator),
                names_to = "metric",
                values_to = "value") %>%
   unite("source_metric", data_source, metric) %>%
   pivot_wider(names_from = source_metric,
-              values_from = value) %>% 
-  mutate(
-    GP_ONS_ratio = GP_numerator / ONS_numerator
-  )
+              values_from = value) # %>% 
+  # mutate(
+  #   GP_ONS_ratio = GP_numerator / ONS_numerator
+  #)
 
 write.csv(collate_measures_rate_table, here::here("output", "report", "collate_measures_rate_table.csv"))
 
