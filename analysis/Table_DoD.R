@@ -41,7 +41,7 @@ DoD_diff_dataset <- dataset0 %>%
       rural_urban >= 5 ~ "rural",
       TRUE ~ NA_character_
     ),
-    ONS_year = year(ons_death_date)
+    year_pref_ONS = if_else(!is.na(ons_death_date), year(ons_death_date), year(TPP_death_date))
   ) %>%
   mutate(
     ONS_or_TPP = case_when(
@@ -82,13 +82,13 @@ rounding <- function(vars) {
 table_DoD_general <- DoD_diff_dataset %>%
   filter(ONS_or_TPP == "ONS & TPP") %>%
   group_by(
-    ONS_year
+    year_pref_ONS
   ) %>% 
   mutate(
     GP_ONS_annual_deaths = rounding(n())
   ) %>% 
   ungroup() %>% 
-  group_by(ONS_year,  DoD_groups , GP_ONS_annual_deaths) %>%
+  group_by(year_pref_ONS,  DoD_groups , GP_ONS_annual_deaths) %>%
   summarise(count_by_group_DoD = rounding(n())) %>% 
   mutate(
     group_var = "general population",
@@ -102,16 +102,16 @@ summarise_DoD_by_group <- function(data, group_var) {
   
   data %>%
     filter(ONS_or_TPP == "ONS & TPP") %>%
-    group_by(ONS_year, {{ group_var }}) %>%
+    group_by(year_pref_ONS, {{ group_var }}) %>%
     mutate(GP_ONS_annual_deaths = rounding(n())) %>%
     ungroup() %>%
-    group_by(ONS_year, {{ group_var }}, DoD_groups, GP_ONS_annual_deaths) %>%
+    group_by(year_pref_ONS, {{ group_var }}, DoD_groups, GP_ONS_annual_deaths) %>%
     summarise(count_by_group_DoD = rounding(n()), .groups = "drop") %>%
     mutate(
       group_var = group_var_name,
       group_value = as.character({{ group_var }})
     ) %>%
-    select(ONS_year, DoD_groups, GP_ONS_annual_deaths, count_by_group_DoD, group_var, group_value)
+    select(year_pref_ONS, DoD_groups, GP_ONS_annual_deaths, count_by_group_DoD, group_var, group_value)
 }
 
 #tables by group
@@ -137,9 +137,9 @@ write.csv(collate_DoD_diff_table, here::here("output", "report", "collate_DoD_di
 
 # 2- Table by source --------------------------------------------------------------------------------------
 table_source_general <- DoD_diff_dataset %>%
-  group_by(ONS_year) %>%
+  group_by(year_pref_ONS) %>%
   mutate(total = rounding(n())) %>% 
-  group_by(ONS_year, ONS_or_TPP, total) %>%
+  group_by(year_pref_ONS, ONS_or_TPP, total) %>%
   summarise(
     count = rounding(n()),
     .groups = "drop"
@@ -148,17 +148,17 @@ table_source_general <- DoD_diff_dataset %>%
     group_var = "general population",
     group_value = "general population"
   ) %>%
-  select(ONS_year, ONS_or_TPP, count, group_var, group_value)
+  select(year_pref_ONS, ONS_or_TPP, count, group_var, group_value)
 
 
 table_source_by_subgroup <- function(data, group_var) {
   group_var_name <- deparse(substitute(group_var))
   
   data %>%
-    filter(ONS_year > 2009) %>%
-    group_by(ONS_year, {{ group_var }}) %>%
+    filter(year_pref_ONS > 2009) %>%
+    group_by(year_pref_ONS, {{ group_var }}) %>%
     mutate(total = n()) %>%
-    group_by(ONS_year, {{ group_var }}, ONS_or_TPP, total) %>%
+    group_by(year_pref_ONS, {{ group_var }}, ONS_or_TPP, total) %>%
     summarise(
       count = rounding(n()),
       .groups = "drop"
@@ -167,7 +167,7 @@ table_source_by_subgroup <- function(data, group_var) {
       group_var = group_var_name,
       group_value = as.character({{ group_var }})
     ) %>%
-    select(ONS_year, ONS_or_TPP, count, group_var, group_value)
+    select(year_pref_ONS, ONS_or_TPP, count, group_var, group_value)
 }
 
 
@@ -194,7 +194,7 @@ collate_death_source_table <- bind_rows(
 # # -----------------------------------------------------------------------------------------
 # 
 # #Line plot number of death
-# ggplot(table_source, aes(x = ONS_year, y = count, color = ONS_or_TPP, group = ONS_or_TPP)) +
+# ggplot(table_source, aes(x = year_pref_ONS, y = count, color = ONS_or_TPP, group = ONS_or_TPP)) +
 #   geom_line(linewidth = 1) +
 #   scale_color_viridis_d(name = "Source") +
 #   labs(
@@ -205,7 +205,7 @@ collate_death_source_table <- bind_rows(
 #   theme_minimal(base_size = 14)
 # 
 # #Stock bar number death
-# ggplot(table_source, aes(x = factor(ONS_year), y = count, fill = ONS_or_TPP)) +
+# ggplot(table_source, aes(x = factor(year_pref_ONS), y = count, fill = ONS_or_TPP)) +
 #   geom_bar(stat = "identity") +
 #   scale_fill_viridis_d(name = "Source") +
 #   labs(
@@ -217,7 +217,7 @@ collate_death_source_table <- bind_rows(
 #   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 # 
 # # Line percentage -> best
-# ggplot(table_source, aes(x = ONS_year, y = perc_source, color = ONS_or_TPP, group = ONS_or_TPP)) +
+# ggplot(table_source, aes(x = year_pref_ONS, y = perc_source, color = ONS_or_TPP, group = ONS_or_TPP)) +
 #   geom_line(linewidth = 1) +
 #   scale_color_viridis_d(name = "Source") +
 #   labs(
@@ -231,10 +231,10 @@ collate_death_source_table <- bind_rows(
 # # % days diff
 # table_perc_DoD <- DoD_diff_dataset %>%
 #   filter(ONS_or_TPP == "ONS & TPP") %>% 
-#   group_by(ONS_year) %>% 
+#   group_by(year_pref_ONS) %>% 
 #   mutate (total = n()) %>% 
 #   ungroup() %>% 
-#   group_by(ONS_year, DoD_groups) %>% 
+#   group_by(year_pref_ONS, DoD_groups) %>% 
 #   summarise(
 #     DoD_group_count = n(),
 #     DoD_group_perc = n()/total*100
