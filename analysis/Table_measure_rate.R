@@ -39,7 +39,8 @@ dataset_measure <- dataset0 %>%
       str_detect(measure, "mortality_region") ~ as.character(region),
       str_detect(measure, "mortality_rural_urban") ~ as.character(rural_urban),
       str_detect(measure, "mortality_IMD_q10") ~ as.character(IMD_q10),
-      str_detect(measure, "mortality_ethnicity") ~ as.character(ethnicity),      
+      str_detect(measure, "mortality_ethnicity") ~ as.character(ethnicity),
+      str_detect(measure, "mortality_sex") ~ as.character(sex),      
       str_detect(measure, "mortality_overall") ~ "overall",
       TRUE ~ NA_character_
     )

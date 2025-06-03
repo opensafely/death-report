@@ -110,3 +110,6 @@ dataset.ethnicity = clinical_events.where(
     ).sort_by(
         clinical_events.date
     ).last_for_patient().snomedct_code.to_category(ethnicity5)
+
+# Sex
+dataset.sex = patients.sex

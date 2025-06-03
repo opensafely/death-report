@@ -23,7 +23,8 @@ dataset0 <- read_csv("output/dataset_death_date_diff.csv.gz") %>%
     ons_death_place = as.factor(ons_death_place),
     region = as.factor(region),
     IMD_q10 = as.factor(IMD_q10),
-    ethnicity = as.factor(ethnicity)
+    ethnicity = as.factor(ethnicity),
+    sex = as.factor(sex)
     )
   
 
@@ -130,8 +131,9 @@ DoD_by_IMD_q10 <- summarise_DoD_by_group(DoD_diff_dataset, IMD_q10)
 
 DoD_by_ethnicity <- summarise_DoD_by_group(DoD_diff_dataset, ethnicity)
 
+DoD_by_sex <- summarise_DoD_by_group(DoD_diff_dataset, sex)
 
-collate_DoD_diff_table <- rbind(table_DoD_general, DoD_by_age, DoD_by_rural_urban, DoD_by_ons_death_place, DoD_by_region, DoD_by_IMD_q10, DoD_by_ethnicity)
+collate_DoD_diff_table <- rbind(table_DoD_general, DoD_by_age, DoD_by_rural_urban, DoD_by_ons_death_place, DoD_by_region, DoD_by_IMD_q10, DoD_by_ethnicity, DoD_by_sex)
 
 write.csv(collate_DoD_diff_table, here::here("output", "report", "collate_DoD_diff_table.csv"))
 
@@ -177,6 +179,7 @@ table_source_region    <- table_source_by_subgroup(DoD_diff_dataset, region)
 table_source_place     <- table_source_by_subgroup(DoD_diff_dataset, ons_death_place)
 table_source_urban     <- table_source_by_subgroup(DoD_diff_dataset, rural_urban)
 table_source_IMD       <- table_source_by_subgroup(DoD_diff_dataset, IMD_q10)
+table_source_sex       <- table_source_by_subgroup(DoD_diff_dataset, sex)
 
 
 collate_death_source_table <- bind_rows(
@@ -186,7 +189,8 @@ collate_death_source_table <- bind_rows(
   table_source_region,
   table_source_place,
   table_source_urban,
-  table_source_IMD
+  table_source_IMD,
+  table_source_sex
 )
 
  
