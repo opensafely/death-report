@@ -102,15 +102,17 @@ ethnicity = clinical_events.where(
         clinical_events.date
     ).last_for_patient().snomedct_code.to_category(ethnicity5)
 
+# Sex
+sex = patients.sex
 
 # Create meassures
 measures = create_measures()
 
 measures.configure_dummy_data(population_size=100000)
 
-###################
-#GP date of death #
-###################
+
+#GP date of death ------------------------------------------------------
+
 measures.define_measure(
     "GP_mortality_overall",
     numerator= GP_death_in_interval,
@@ -129,6 +131,16 @@ measures.define_measure(
     },
 )
 
+# Sex
+measures.define_measure(
+    "GP_mortality_sex",
+    numerator= GP_death_in_interval,
+    denominator= GP_denominator,
+    intervals=intervals,
+    group_by={
+        "sex": sex,
+    },
+)
 
 ## Place of death
 measures.define_measure(
@@ -182,9 +194,8 @@ measures.define_measure(
     },
 )
 
-###################
-# ONS date of death #
-###################
+
+# ONS date of death --------------------------------------------------
 
 ##Overall
 measures.define_measure(
@@ -202,6 +213,17 @@ measures.define_measure(
     intervals=intervals,
     group_by={
         "age_band": age_band,
+    },
+)
+
+## Sex
+measures.define_measure(
+    "ONS_mortality_sex",
+    numerator= ONS_death_in_interval,
+    denominator= ONS_denominator,
+    intervals=intervals,
+    group_by={
+        "sex": sex,
     },
 )
 
@@ -247,9 +269,9 @@ measures.define_measure(
         "ethnicity": ethnicity,
     },
 )
-###################
-# Global date of death #
-###################
+
+# Global date of death -------------------------------------
+
 
 ##Overall
 measures.define_measure(
@@ -270,6 +292,16 @@ measures.define_measure(
     },
 )
 
+## Sex
+measures.define_measure(
+    "global_mortality_sex",
+    numerator= global_death_in_interval,
+    denominator= global_denominator,
+    intervals=intervals,
+    group_by={
+        "sex": sex,
+    },
+)
 
 ## Place of death
 measures.define_measure(
