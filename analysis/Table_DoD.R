@@ -157,7 +157,7 @@ table_source_by_subgroup <- function(data, group_var) {
   group_var_name <- deparse(substitute(group_var))
   
   data %>%
-    filter(year_pref_ONS > 2009) %>%
+    filter(year_pref_ONS > 2008) %>%
     group_by(year_pref_ONS, {{ group_var }}) %>%
     mutate(total = n()) %>%
     group_by(year_pref_ONS, {{ group_var }}, ONS_or_TPP, total) %>%
