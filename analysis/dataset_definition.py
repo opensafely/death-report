@@ -1,3 +1,14 @@
+###################################################
+# This script calculates yearly death counts from 
+# ONS and Primary Care records, and extracts 
+# dates of death to analyze differences between 
+# the ONS and PC datasets.
+#
+# Author: Martina Pesce / Andrea Schaffer
+#   Bennett Institute for Applied Data Science
+#   University of Oxford, 2025
+###################################################
+
 from ehrql import  when, create_dataset, case, minimum_of, codelist_from_csv
 from ehrql.tables.tpp import patients, practice_registrations, ons_deaths, addresses, clinical_events
 
@@ -7,8 +18,9 @@ dataset.configure_dummy_data(population_size=1000)
 
 
 #Dates 
-start_date = "2005-01-01"
-end_date = "2024-12-31"
+start_date = "2009-01-01"
+#End date (day before last ONS deaths update)
+end_date = "2025-06-06"
 earliest_DoD = minimum_of(
     patients.date_of_death,
     ons_deaths.date,
@@ -20,7 +32,7 @@ year_start_DoD = earliest_DoD.to_first_of_year()
 
 ## Include people alive
 #was_alive = patients.date_of_death.is_after(year_start_DoD) | patients.date_of_death.is_null() | ons_deaths.date.is_after(year_start_DoD) | ons_deaths.date.is_null()
-#patients.date_of_birth
+
 
 ## Include people registered with a TPP practice
 has_registration = practice_registrations.for_patient_on(year_start_DoD).exists_for_patient()
@@ -31,8 +43,31 @@ has_possible_age= ((patients.age_on(year_start_DoD) < 110) & (patients.age_on(ye
 ## Exclude people with non-male or female sex due to disclosure risk;
 non_disclosive_sex= (patients.sex == "male") | (patients.sex == "female")
 
-#Died during the period
-died_during_study = patients.date_of_death.is_after(start_date) | ons_deaths.date.is_after(start_date)
+# Died during study and while registered
+## Last deregistration date per patient
+last_registration_end = practice_registrations.end_date.maximum_for_patient()
+
+## TPP death during study and while registered
+tpp_death_during_study = (
+    patients.date_of_death.is_after(start_date) &
+    (
+        patients.date_of_death.is_on_or_before(last_registration_end) |
+        last_registration_end.is_null()
+    )
+)
+
+# ONS death during study and while registered, allowing for missing end_date
+ons_death_during_study = (
+    ons_deaths.date.is_after(start_date) &
+    (
+        ons_deaths.date.is_on_or_before(last_registration_end) |
+        last_registration_end.is_null()
+    )
+)
+
+
+# Combine both ONS/TPP
+died_during_study = tpp_death_during_study | ons_death_during_study
 
 # define dataset poppulation
 dataset.define_population(
@@ -77,7 +112,6 @@ dataset.region = practice_registrations.for_patient_on(year_start_DoD).practice_
 
 ### Rurality 
 dataset.rural_urban = addresses.for_patient_on(year_start_DoD).rural_urban_classification
-
 
 
 #IMD
