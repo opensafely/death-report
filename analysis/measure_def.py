@@ -6,31 +6,31 @@
 #   Bennett Institute for Applied Data Science
 #   University of Oxford, 2025
 ###################################################
-
 from ehrql import INTERVAL, create_measures, years, case, when, codelist_from_csv
 from ehrql.tables.tpp import patients, practice_registrations, ons_deaths, addresses, clinical_events
 
- 
 ##########
-#Numerator: dead during the period and registred on ONS/GP data
-## Last deregistration date per patient
+#Numerator: dead during the period and registred on ONS/GP date
+# Last deregistration date per patient
 last_registration_end = practice_registrations.end_date.maximum_for_patient()
 
-GP_death_in_interval = ( patients.date_of_death.is_during(INTERVAL)  &
+GP_death_in_interval = (
+    patients.date_of_death.is_during(INTERVAL) &
     (
         patients.date_of_death.is_on_or_before(last_registration_end) |
         last_registration_end.is_null()
     )
 )
 
-ONS_death_in_interval = ( ons_deaths.date.is_during(INTERVAL) &
+ONS_death_in_interval = (
+    ons_deaths.date.is_during(INTERVAL) &
     (
         ons_deaths.date.is_on_or_before(last_registration_end) |
         last_registration_end.is_null()
     )
 )
 
-global_death_in_interval = ONS_death_in_interval | GP_death_in_interval
+global_death_in_interval = GP_death_in_interval | ONS_death_in_interval
 
 #Denominator: inclusion criteria
 ## Include people alive
@@ -64,7 +64,9 @@ global_denominator =  ( (was_alive_ONS | was_alive_GP)
                        & non_disclosive_sex) 
 
 #Specify intervals
-intervals = years(2015).starting_on("2009-01-01")
+intervals = years(20).starting_on("2005-01-01")
+
+
 #Subgroups
 ## Age 
 age = patients.age_on(INTERVAL.start_date)
