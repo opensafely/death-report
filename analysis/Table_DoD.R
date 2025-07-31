@@ -1,4 +1,4 @@
-|# Preliminaries ----
+# Preliminaries ----
 
 # Import libraries
 library("tidyverse")
