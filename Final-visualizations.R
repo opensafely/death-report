@@ -14,7 +14,9 @@ collate_DoD_diff_table <- read_csv("output/report/collate_DoD_diff_table.csv")
 collate_measures_rate_table <- read_csv("output/report/collate_measures_rate_table.csv")
 
 # Create output directory
-output_dir <- here("output", "final visualization")
+output_dir <- here("output", "final_visualization")
+fs::dir_create(output_dir)
+
 
 #-----------------------------------------------------------------------------------------
 # Figure 1. A: Deaths over time by source
@@ -130,9 +132,9 @@ plot_death_by_source <- F1a_general_death_source_total  + F1b_general_death_sour
 plot_death_by_source
 
 
-write.csv(table_by_source_pct, here(output_dir, "table_by_source_pct.csv"))
-write.csv(table_by_source, here(output_dir, "table_by_source_total.csv"))
-ggsave(here(output_dir, "plot_death_by_source.png"), plot = plot_death_by_source,
+write.csv(table_by_source_pct, fs::path(output_dir, glue("table_by_source_pct.csv")))
+write.csv(table_by_source, fs::path(output_dir, glue("table_by_source_total.csv")))
+ggsave(fs::path(output_dir, glue("plot_death_by_source.png")), plot = plot_death_by_source,
        width = 11, height = 4, dpi = 300)
 
 # Figure 2: death day difference-----------------------------------------------
@@ -147,15 +149,13 @@ table_DoD_general <- collate_DoD_diff_table %>%
 table_DoD_general$DoD_groups <- factor(
   table_DoD_general$DoD_groups,
   levels = c(
-    "-366+",
-    "-32 to -365",
+    "-32+",
     "-8 to -31",
     "-1 to -7",
     "0",
     "1-7",
     "8-31",
-    "32-365",
-    "366+"
+    "32+"
   )
 )
 
@@ -201,8 +201,8 @@ plot_other_DoD <- table_DoD_general %>%
             aes(label = round(proportion, 2)),
             vjust = -0.3, size = 3) +
   scale_fill_manual(values = c(
-    "-1 to -7" = "#56B4E9", "-8 to -31" = "#56B4E9", "-32 to -365" = "#56B4E9", "-366+" = "#56B4E9",
-    "1-7" = "#E69F00", "8-31" = "#E69F00", "32-365" = "#E69F00", "366+" = "#E69F00"
+    "-1 to -7" = "#56B4E9", "-8 to -31" = "#56B4E9", "-32+" = "#56B4E9",
+    "1-7" = "#E69F00", "8-31" = "#E69F00", "32+" = "#E69F00"
   )) +
   facet_wrap(~ year_pref_ONS, nrow =1) +
   labs(x = "DoD group", y = "Percentage", title = 'Deaths with different date in ONS and TPP (%), by year') +
@@ -215,9 +215,10 @@ plot_DoD_general <-plot_same_DoD / plot_other_DoD + plot_layout(heights = c(2, 1
 
 plot_DoD_general
 
-write.csv(table_DoD_general, here(output_dir, "table_DoD_general.csv"))
-ggsave(here(output_dir, "plot_DoD_general.png"), plot = plot_DoD_general,
+write.csv(table_DoD_general, fs::path(output_dir, glue("table_DoD_general.csv")))
+ggsave(fs::path(output_dir, glue("plot_DoD_general.png")), plot = plot_DoD_general,
        width = 7, height = 5, dpi = 300)
+
 
 # Plot by group ---------------------------------------------------------------------
 
