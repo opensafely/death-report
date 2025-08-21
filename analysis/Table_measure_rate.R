@@ -1,3 +1,11 @@
+###################################################
+# This script creates (...)
+#
+# Author: Martina Pesce / Andrea Schaffer
+#   Bennett Institute for Applied Data Science
+#   University of Oxford, 2025
+###################################################
+
 library(tidyverse)
 library(lubridate)
 
