@@ -11,7 +11,7 @@ collate_death_source_table <- read_csv("output/report/collate_death_source_table
 
 collate_DoD_diff_table <- read_csv("output/report/collate_DoD_diff_table.csv")
 
-collate_measures_rate_table <- read_csv("output/report/collate_measures_rate_table.csv")
+# collate_measures_rate_table <- read_csv("output/report/collate_measures_rate_table.csv")
 
 # Create output directory
 output_dir <- here("output", "final_visualization")
