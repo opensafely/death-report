@@ -62,7 +62,7 @@ DoD_diff_dataset <- dataset0 %>%
       
       diff_DoD <= -1 & diff_DoD >= -7 ~ "-1 to -7",
       diff_DoD <= -8 & diff_DoD >= -31 ~ "-8 to -32+",
-      diff_DoD >= -32 ~ "-32+",      
+      diff_DoD <= -32 ~ "-32+",      
       
       TRUE ~ NA_character_
     )
