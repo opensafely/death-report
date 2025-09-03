@@ -35,7 +35,7 @@ year_start_DoD = earliest_DoD.to_first_of_year()
 
 
 ## Include people registered with a TPP practice
-has_registration = practice_registrations.for_patient_on(year_start_DoD).exists_for_patient()
+has_registration = practice_registrations.for_patient_on(year_start_DoD).exists_for_patient() |  ((patients.date_of_birth.year == year_start_DoD.year) & practice_registrations.for_patient_on(earliest_DoD).exists_for_patient())
 
 ## Exclude people >110 years due to risk of incorrectly recorded age;
 has_possible_age= ((patients.age_on(year_start_DoD) < 110) & (patients.age_on(year_start_DoD) > 0)) | (patients.date_of_birth.year == year_start_DoD.year)
@@ -45,7 +45,15 @@ non_disclosive_sex= (patients.sex == "male") | (patients.sex == "female")
 
 # Died during study and while registered
 ## Last deregistration date per patient
-last_registration_end = practice_registrations.end_date.maximum_for_patient()
+last_registration_end = (
+    practice_registrations
+    .sort_by(
+        practice_registrations.start_date,
+        practice_registrations.end_date
+    )
+    .last_for_patient()
+    .end_date
+)
 
 ## TPP death during study and while registered
 tpp_death_during_study = (
@@ -91,7 +99,7 @@ dataset.ons_death_date = ons_deaths.date
 
 ### Age band
 dataset.date_of_birth = patients.date_of_birth
-age = patients.age_on(year_start_DoD)
+age = patients.age_on(earliest_DoD)
 
 dataset.age_band = case(
     when((age < 45)).then("0-44"),
@@ -102,20 +110,20 @@ dataset.age_band = case(
     )
 
 ### Practice (anonymous)
-dataset.practice = practice_registrations.for_patient_on(year_start_DoD).practice_pseudo_id
+dataset.practice = practice_registrations.for_patient_on(earliest_DoD).practice_pseudo_id
 
 ### Place of death
 dataset.ons_death_place = ons_deaths.place
 
 ### Practice region
-dataset.region = practice_registrations.for_patient_on(year_start_DoD).practice_nuts1_region_name
+dataset.region = practice_registrations.for_patient_on(earliest_DoD).practice_nuts1_region_name
 
 ### Rurality 
-dataset.rural_urban = addresses.for_patient_on(year_start_DoD).rural_urban_classification
+dataset.rural_urban = addresses.for_patient_on(earliest_DoD).rural_urban_classification
 
 
 #IMD
-imd = addresses.for_patient_on(year_start_DoD).imd_rounded
+imd = addresses.for_patient_on(earliest_DoD).imd_rounded
 
 dataset.IMD_q10 = case(
         when((imd >= 0) & (imd < int(32844 * 1 / 10))).then("1 (most deprived)"),
