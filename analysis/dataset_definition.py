@@ -9,7 +9,7 @@
 #   University of Oxford, 2025
 ###################################################
 
-from ehrql import  when, create_dataset, case, minimum_of, codelist_from_csv
+from ehrql import  when, create_dataset, case, minimum_of, codelist_from_csv, show
 from ehrql.tables.tpp import patients, practice_registrations, ons_deaths, addresses, clinical_events
 
 # initialise dataset
@@ -155,3 +155,16 @@ dataset.ethnicity = clinical_events.where(
 
 # Sex
 dataset.sex = patients.sex
+
+# last End date
+dataset.last_registration_end = (
+    practice_registrations
+    .sort_by(
+        practice_registrations.start_date,
+        practice_registrations.end_date
+    )
+    .last_for_patient()
+    .end_date
+)
+
+
