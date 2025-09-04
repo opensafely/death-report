@@ -58,6 +58,7 @@ last_registration_end = (
 ## TPP death during study and while registered
 tpp_death_during_study = (
     patients.date_of_death.is_after(start_date) &
+    patients.date_of_death.is_on_or_before(end_date) &    
     (
         patients.date_of_death.is_on_or_before(last_registration_end) |
         last_registration_end.is_null()
@@ -67,6 +68,7 @@ tpp_death_during_study = (
 # ONS death during study and while registered, allowing for missing end_date
 ons_death_during_study = (
     ons_deaths.date.is_after(start_date) &
+    patients.date_of_death.is_on_or_before(end_date) &    
     (
         ons_deaths.date.is_on_or_before(last_registration_end) |
         last_registration_end.is_null()
@@ -157,14 +159,6 @@ dataset.ethnicity = clinical_events.where(
 dataset.sex = patients.sex
 
 # last End date
-dataset.last_registration_end = (
-    practice_registrations
-    .sort_by(
-        practice_registrations.start_date,
-        practice_registrations.end_date
-    )
-    .last_for_patient()
-    .end_date
-)
+dataset.last_registration_end = last_registration_end
 
 

@@ -23,6 +23,12 @@ DoD_diff <- read_csv("output/dataset_death_date_diff.csv.gz") %>%
     IMD_q10 = as.factor(IMD_q10),
     ethnicity = as.factor(ethnicity),
     min_DoD = pmin(TPP_death_date, ons_death_date, na.rm = TRUE)
+  ) %>% 
+  mutate(
+    death_dereg_diff = case_when(
+      !is.na(last_registration_end) ~ last_registration_end - min_DoD,
+      TRUE ~ as.difftime(NA_real_, units = "days")
+    )
   )
 
 
