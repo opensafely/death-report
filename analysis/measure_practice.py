@@ -7,7 +7,7 @@
 #   University of Oxford, 2025
 ###################################################
 
-from ehrql import INTERVAL, create_measures, years, case, when
+from ehrql import INTERVAL, create_measures, years, case, when, months, show
 from ehrql.tables.tpp import patients, practice_registrations, ons_deaths, addresses
 
  
@@ -15,7 +15,15 @@ from ehrql.tables.tpp import patients, practice_registrations, ons_deaths, addre
 #Numerator: dead during the period and registred on ONS/GP date
 
 # Last deregistration date per patient
-last_registration_end = practice_registrations.end_date.maximum_for_patient()
+last_registration_end = (
+    practice_registrations
+    .sort_by(
+        practice_registrations.start_date,
+        practice_registrations.end_date
+    )
+    .last_for_patient()
+    .end_date
+)
 
 GP_death_in_interval = (
     patients.date_of_death.is_during(INTERVAL) &
@@ -42,10 +50,16 @@ was_alive_GP = patients.date_of_death.is_after(INTERVAL.start_date) | patients.d
 was_alive_ONS = ons_deaths.date.is_after(INTERVAL.start_date) | ons_deaths.date.is_null() 
 
 ## Include people registered with a TPP practice
-has_registration = practice_registrations.for_patient_on(INTERVAL.start_date).exists_for_patient()
+has_registration = (
+    # Registered at the beginning of the period
+   ( practice_registrations.for_patient_on(INTERVAL.start_date).exists_for_patient())
+    |
+    # Born in the same calendar year with a valid registration
+    ((patients.date_of_birth.is_during(INTERVAL)) & (practice_registrations.where(practice_registrations.start_date.is_during(INTERVAL))).exists_for_patient())
+)
 
 ## Exclude people >110 years due to risk of incorrectly recorded age
-has_possible_age= ((patients.age_on(INTERVAL.start_date) < 110) & (patients.age_on(INTERVAL.start_date) > 0)) | (patients.date_of_birth.year == INTERVAL.start_date.year)
+has_possible_age= ((patients.age_on(INTERVAL.start_date) < 110)  & (patients.age_on(INTERVAL.start_date) > 0) | (patients.date_of_birth.is_during(INTERVAL)))
 
 ## Exclude people with non-male or female sex due to disclosure risk
 non_disclosive_sex= (patients.sex == "male") | (patients.sex == "female")
@@ -58,7 +72,7 @@ GP_denominator =  (was_alive_GP
                    & non_disclosive_sex)
 
 ONS_denominator =  (was_alive_ONS
-                   & has_registration 
+                   & has_registration
                    & has_possible_age 
                    & non_disclosive_sex)
 
@@ -68,10 +82,23 @@ global_denominator =  ( (was_alive_ONS | was_alive_GP)
                        & non_disclosive_sex) 
 
 #Specify intervals
-intervals = years(20).starting_on("2005-01-01")
+intervals = years(6).starting_on("2019-01-01")
 
 ## Practice
-practice = practice_registrations.for_patient_on(INTERVAL.start_date).practice_pseudo_id
+practice_gral = practice_registrations.for_patient_on(INTERVAL.start_date).practice_pseudo_id 
+
+practice_babies = (practice_registrations
+                   .where(patients.date_of_birth.is_during(INTERVAL))
+                   .sort_by(practice_registrations.start_date)
+                   .first_for_patient()
+                   .practice_pseudo_id
+                   )
+
+practice = case(
+    when(practice_gral.is_not_null()).then(practice_gral),
+    when(practice_babies.is_not_null()).then(practice_babies),
+    otherwise=None,
+)
 
 
 # Create meassures
