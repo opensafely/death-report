@@ -58,3 +58,10 @@ actions:
       highly_sensitive:
         measure_csv: output/measures/measures_by_practice.csv
 
+  decile_table_figure:
+    run:  r:v2 analysis/practice_decile.R
+    needs: [measures_by_practice]
+    outputs:
+      moderately_sensitive:
+        csv: output/report/*.csv
+        png: output/report/*.png 
