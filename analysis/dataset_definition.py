@@ -68,7 +68,7 @@ tpp_death_during_study = (
 # ONS death during study and while registered, allowing for missing end_date
 ons_death_during_study = (
     ons_deaths.date.is_after(start_date) &
-    patients.date_of_death.is_on_or_before(end_date) &    
+    ons_deaths.date.is_on_or_before(end_date) &    
     (
         ons_deaths.date.is_on_or_before(last_registration_end) |
         last_registration_end.is_null()
