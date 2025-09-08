@@ -215,7 +215,7 @@ table_source_general_20_24 <- DoD_diff_dataset %>%
 
 # % by source 01-01-2025 to 06-06-2024 by month
 table_source_general_2025 <- DoD_diff_dataset %>%
-  filter(year_pref_ONS == 2025 & year_month_pref_ONS != "2025-06") %>% 
+  filter(year_pref_ONS > 2023 & year_month_pref_ONS != "2025-06") %>% 
   group_by(year_month_pref_ONS) %>%
   mutate(total = rounding(n())) %>% 
   group_by(year_month_pref_ONS, ONS_or_TPP, total) %>%
@@ -237,10 +237,10 @@ collate_death_source_table_spec_periods <- bind_rows(table_source_general_2025, 
 write.csv(collate_death_source_table_spec_periods, here::here("output", "report", "collate_death_source_table_spec_periods.csv"))
 
 # Practice source
-table_source_practice <- table_source_by_subgroup(
-  DoD_diff_dataset[DoD_diff_dataset$year_pref_ONS == 2024, ],
-  practice
-)
+# table_source_practice <- table_source_by_subgroup(
+#   DoD_diff_dataset[DoD_diff_dataset$year_pref_ONS == 2024, ],
+#   practice
+# )
 
 # # -----------------------------------------------------------------------------------------
 # 

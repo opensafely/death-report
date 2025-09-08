@@ -235,7 +235,6 @@ tpp_share_by_year <- collate_death_source_table %>%
   ) %>%
   group_by(group_var, group_value) %>%
   arrange(year_pref_ONS, .by_group = TRUE) %>%
-  # keep only rows after the first non-zero TOTAL per subgroup
   mutate(started = cumsum(replace_na(total, 0) > 0) > 0) %>%
   filter(started) %>%
   mutate(pct_tpp = if_else(total > 0, tpp / total, NA_real_)) %>%
@@ -251,7 +250,7 @@ subgroup_perc_plot <- function(var_name, data) {
   year_labels <- as.character(all_years)
   
   temp_plot<- ggplot(df, aes(x = year_pref_ONS, y = pct_tpp, group = group_value, color = group_value)) +
-    geom_line() +
+    geom_line(linetype = "dashed") +
     geom_point(size = 2) +
     scale_y_continuous(labels = percent_format(accuracy = 1)) +
     scale_x_continuous(breaks = all_years, labels = year_labels) +
@@ -308,7 +307,7 @@ subgroup_same_DoD_plot <- function(var_name, data) {
   year_labels <- as.character(all_years)
   
   temp_plot <- ggplot(df, aes(x = year_pref_ONS, y = proportion, group = group_value, color = group_value)) +
-    geom_line() +
+    geom_line(linetype = "dashed") +
     geom_point(size = 2) +
     scale_y_continuous(labels = percent_format(accuracy = 0.1)) +
     coord_cartesian(ylim = c(0.9, 1), clip = "off") +
@@ -346,86 +345,110 @@ subgroup_same_DoD_plot("rural_urban",same_day_share_by_year)
 subgroup_same_DoD_plot("sex",same_day_share_by_year)
 
 
+# Extra options ---
+## Distribution of proportions by subgroup and source
+bar_prop_by_group <- function(data, var_name, year = 2024) {
+  df_prop <- data %>%
+    filter(year_pref_ONS == year,
+           group_var == var_name,
+           ONS_or_TPP != "TPP") %>%
+    group_by(ONS_or_TPP, group_value) %>%
+    summarise(n = sum(count), .groups = "drop_last") %>%
+    mutate(prop = n / sum(n)) %>%
+    ungroup()
+  
+  # n total by facet
+  totals <- df_prop %>%
+    group_by(ONS_or_TPP) %>%
+    summarise(n_total = sum(n), .groups = "drop")
+  
+  df_plot <- df_prop %>%
+    left_join(totals, by = "ONS_or_TPP") %>%
+    mutate(facet_lab = paste0(ONS_or_TPP, " (n = ", scales::comma(n_total), ")"))
+  
+  temp_plot <- ggplot(df_plot, aes(x = group_value, y = prop, fill = group_value)) +
+    geom_col(width = 0.7) +
+    geom_text(
+      aes(label = scales::percent(prop, accuracy = 1)),
+      vjust = -0.35, size = 3
+    ) +
+    scale_y_continuous(
+      labels = scales::percent_format(accuracy = 1),
+      expand = expansion(mult = c(0, 0.10)) 
+    ) +
+    facet_wrap(~ facet_lab) +
+    labs(
+      title = paste0("Distribution of proportions by '", var_name, "' and source (", year, ")"),
+      x = "Group value",
+      y = "Proporción"
+    ) +
+    theme_minimal() +
+    theme(
+      panel.background = element_rect(fill = "white", color = NA),
+      plot.background  = element_rect(fill = "white", color = NA),
+      axis.text.x.top = element_text(hjust = 0),
+      axis.text.x.bottom = element_text(hjust = 0),
+      strip.text.y.left = element_text(angle = 0, hjust = 1),
+      strip.placement = "outside",
+      axis.ticks.x = element_line(),
+      legend.position = "bottom"
+    ) 
+  print(temp_plot)
+  ggsave(fs::path(output_dir, glue("ditrib_death_subgroup_source_{var_name}.png")), plot = temp_plot, width = 11, height = 4)
+}
 
-# # Have a general view
-# #Figure 2. A: Deaths over time by source by subgroup
-# table_by_source <- collate_death_source_table %>% 
-#   filter(year_pref_ONS > 2018) %>%
-#   group_by(group_var, group_value, year_pref_ONS) %>%
-#   summarise(
-#     tpp = sum(count[ONS_or_TPP %in% c("TPP", "ONS & TPP")]),
-#     ons = sum(count[ONS_or_TPP %in% c("ONS", "ONS & TPP")]),
-#     total = sum(count[ONS_or_TPP %in% c("TPP", "ONS & TPP", "ONS")])
-#   ) %>%
-#   pivot_longer(cols = c("tpp", "ons", "total"),
-#                names_to = "source",
-#                values_to = "deaths") %>%
-#   group_by(source) %>%
-#   arrange(group_var, group_value, year_pref_ONS) %>%
-#   filter(cumsum(deaths != 0) > 0)  # only keep rows after first non-zero
-# 
-# # Plot
-# all_years <- sort(unique(table_by_source$year_pref_ONS))
-# year_labels <- ifelse(all_years == 2025, "2025*", as.character(all_years))
-# 
-# total <- ggplot(table_by_source, aes(x = year_pref_ONS, y = deaths, color = source)) +
-#   geom_line(size = 1) +
-#   geom_point() +
-#   labs(
-#     title = "Figure 1: Deaths over time by source",
-#     x = "Year",
-#     y = "Number of deaths",
-#     color = "Source"
-#   ) + scale_y_continuous(
-#     limits = c(0, NA) )+
-#   scale_color_manual(values = c(
-#     "tpp" = "#56B4E9",
-#     "ons" = "#E69F00",
-#     "total" = "black"
-#   )) +
-#   scale_x_continuous(
-#     breaks = all_years,
-#     labels = year_labels  # Add space to the right for text
-#   ) +
-#   facet_wrap(group_var ~ group_value, scales = "free_y")+
-#   theme_minimal()
-# 
-# 
-# 
-# # plot 2
-# # Figure 2: death day difference
-# # Prepare data
-# #
-# table_DoD <- collate_DoD_diff_table %>% 
-#   mutate(
-#     proportion = count_by_group_DoD / GP_ONS_annual_deaths*100
-#   )
-# 
-# table_DoD$DoD_groups <- factor(
-#   table_DoD$DoD_groups,
-#   levels = c(
-#     "-366+",
-#     "-32 to -365",
-#     "-8 to -31",
-#     "-1 to -7",
-#     "0",
-#     "1-7",
-#     "8-31",
-#     "32-365",
-#     "366+"
-#   )
-# )
-# 
-# 
-# 
-# 
-# plot_same_DoD <- table_DoD %>%
-#   filter(DoD_groups == "0" & year_pref_ONS < 2025) %>%
-#   ggplot(aes(x = year_pref_ONS, y = proportion)) +  # ← numeric x
-#   geom_bar(stat = "identity", fill = "#009E73", width = 0.3) +
-#   geom_hline(yintercept = 95, linetype = "dashed") +
-#   annotate("text", x = 2024.2, y = 98, label = "95%", hjust = 0, size = 3) +
-#   geom_text(aes(label = round(proportion, 2)), vjust = -0.3, size = 3) +
-#   labs(x = "Year", y = "Percentage", title = "Deaths with same date in ONS and TPP (%), by year") +
-#   facet_wrap(group_var ~ group_value, scales = "free_y")+
-#   theme_minimal()
+# Individuales
+bar_prop_by_group(collate_death_source_table, var_name = "age_band",          year = 2024)
+bar_prop_by_group(collate_death_source_table, var_name = "ethnicity",         year = 2024)
+bar_prop_by_group(collate_death_source_table, var_name = "general population",year = 2024)
+bar_prop_by_group(collate_death_source_table, var_name = "IMD_q10",           year = 2024)
+bar_prop_by_group(collate_death_source_table, var_name = "ons_death_place",   year = 2024)
+bar_prop_by_group(collate_death_source_table, var_name = "region",            year = 2024)
+bar_prop_by_group(collate_death_source_table, var_name = "rural_urban",       year = 2024)
+bar_prop_by_group(collate_death_source_table, var_name = "sex",               year = 2024)
+
+## Bar stack by subgroup and source
+
+bar_stack_100_by_source <- function(data, var_name, year = 2024) {
+  df_prop <- data %>%
+    filter(year_pref_ONS == year, group_var == var_name) %>%
+    group_by(ONS_or_TPP, group_value) %>%
+    summarise(n = sum(count), .groups = "drop") %>%
+    group_by(ONS_or_TPP) %>%
+    mutate(prop = n / sum(n)) %>%
+    ungroup()
+  
+  temp_plot<- ggplot(df_prop, aes(x = ONS_or_TPP, y = prop, fill = group_value)) +
+    geom_bar(stat = "identity", position = "fill") +
+    scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+    labs(
+      x = "Death source",
+      y = "Percentage",
+      fill = var_name
+      # title=
+    ) +
+    theme_minimal(base_size = 14) +
+    # theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    coord_flip()+
+  theme(
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background  = element_rect(fill = "white", color = NA),
+    axis.text.x.top = element_text(hjust = 0),
+    axis.text.x.bottom = element_text(hjust = 0),
+    strip.text.y.left = element_text(angle = 0, hjust = 1),
+    strip.placement = "outside",
+    axis.ticks.x = element_line(),
+    legend.position = "bottom"
+  ) 
+  print(temp_plot)
+  ggsave(fs::path(output_dir, glue("bar_stack_100_by_source_{var_name}.png")), plot = temp_plot, width = 11, height = 4)
+}
+
+bar_stack_100_by_source(collate_death_source_table, var_name = "age_band",           year = 2024)
+bar_stack_100_by_source(collate_death_source_table, var_name = "ethnicity",          year = 2024)
+bar_stack_100_by_source(collate_death_source_table, var_name = "general population", year = 2024)
+bar_stack_100_by_source(collate_death_source_table, var_name = "IMD_q10",            year = 2024)
+bar_stack_100_by_source(collate_death_source_table, var_name = "ons_death_place",    year = 2024)
+bar_stack_100_by_source(collate_death_source_table, var_name = "region",             year = 2024)
+bar_stack_100_by_source(collate_death_source_table, var_name = "rural_urban",        year = 2024)
+bar_stack_100_by_source(collate_death_source_table, var_name = "sex",                year = 2024)
