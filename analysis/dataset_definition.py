@@ -9,7 +9,7 @@
 #   University of Oxford, 2025
 ###################################################
 
-from ehrql import  when, create_dataset, case, minimum_of, codelist_from_csv, show
+from ehrql import  when, create_dataset, case, minimum_of, codelist_from_csv, days
 from ehrql.tables.tpp import patients, practice_registrations, ons_deaths, addresses, clinical_events
 
 # initialise dataset
@@ -60,7 +60,7 @@ tpp_death_during_study = (
     patients.date_of_death.is_on_or_after(start_date) &
     patients.date_of_death.is_on_or_before(end_date) &    
     (
-        patients.date_of_death.is_on_or_before(last_registration_end) |
+        patients.date_of_death.is_on_or_before(last_registration_end + days(30)) |
         last_registration_end.is_null()
     )
 )
