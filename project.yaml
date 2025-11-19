@@ -26,6 +26,7 @@ actions:
         categorical1: output/report/collate_death_source_table.csv
         categorical2: output/report/collate_DoD_diff_table.csv
         categorical3: output/report/collate_death_source_table_spec_periods.csv
+        categorical3: output/report/by_year_dereg_DoD_diff.csv
 
   visualization:
     run:  r:v2 Final-visualizations.R
