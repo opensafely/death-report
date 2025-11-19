@@ -46,8 +46,8 @@ global_death_in_interval = GP_death_in_interval | ONS_death_in_interval
 
 #Denominator: inclusion criteria
 ## Include people alive
-was_alive_GP = patients.date_of_death.is_after(INTERVAL.start_date) | patients.date_of_death.is_null() 
-was_alive_ONS = ons_deaths.date.is_after(INTERVAL.start_date) | ons_deaths.date.is_null() 
+was_alive_GP = patients.date_of_death.is_on_or_after(INTERVAL.start_date) | patients.date_of_death.is_null() 
+was_alive_ONS = ons_deaths.date.is_on_or_after(INTERVAL.start_date) | ons_deaths.date.is_null() 
 
 ## Include people registered with a TPP practice
 has_registration = (

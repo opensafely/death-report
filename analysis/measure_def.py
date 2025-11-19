@@ -12,7 +12,15 @@ from ehrql.tables.tpp import patients, practice_registrations, ons_deaths, addre
 ##########
 #Numerator: dead during the period and registred on ONS/GP date
 # Last deregistration date per patient
-last_registration_end = practice_registrations.end_date.maximum_for_patient()
+last_registration_end = (
+    practice_registrations
+    .sort_by(
+        practice_registrations.start_date,
+        practice_registrations.end_date
+    )
+    .last_for_patient()
+    .end_date
+)
 
 GP_death_in_interval = (
     patients.date_of_death.is_during(INTERVAL) &
@@ -34,8 +42,8 @@ global_death_in_interval = GP_death_in_interval | ONS_death_in_interval
 
 #Denominator: inclusion criteria
 ## Include people alive
-was_alive_GP = patients.date_of_death.is_after(INTERVAL.start_date) | patients.date_of_death.is_null() 
-was_alive_ONS = ons_deaths.date.is_after(INTERVAL.start_date) | ons_deaths.date.is_null() 
+was_alive_GP = patients.date_of_death.is_on_or_after(INTERVAL.start_date) | patients.date_of_death.is_null() 
+was_alive_ONS = ons_deaths.date.is_on_or_after(INTERVAL.start_date) | ons_deaths.date.is_null() 
 
 ## Include people registered with a TPP practice
 has_registration = practice_registrations.for_patient_on(INTERVAL.start_date).exists_for_patient()
