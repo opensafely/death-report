@@ -24,13 +24,22 @@ dataset0 <- read_csv("output/dataset_death_date_diff.csv.gz") %>%
     region = as.factor(region),
     IMD_q10 = as.factor(IMD_q10),
     ethnicity = as.factor(ethnicity),
-    sex = as.factor(sex)
+    sex = as.factor(sex),
+    last_registration_end_date = as.Date(last_registration_end)
   )
 
 
 # Create variables
 DoD_diff_dataset <- dataset0 %>%
   mutate(
+    death_dereg_diff_TPP = case_when(
+      !is.na(last_registration_end) ~ as.Date(last_registration_end) - TPP_death_date,
+      TRUE ~ as.difftime(NA_real_, units = "days"
+      )),
+    death_dereg_diff_ONS = case_when(
+      !is.na(last_registration_end) ~ as.Date(last_registration_end) - ons_death_date,
+      TRUE ~ as.difftime(NA_real_, units = "days"
+      )),
     DoD_min = pmin(TPP_death_date, ons_death_date, na.rm = TRUE),
     diff_DoD = TPP_death_date - ons_death_date,
     TPP_death = case_when(!is.na(TPP_death_date) ~ "yes",
@@ -65,7 +74,46 @@ DoD_diff_dataset <- dataset0 %>%
       diff_DoD <= -32 ~ "-32+",      
       
       TRUE ~ NA_character_
-    )
+    ),
+    DoD_dereg_tpp = case_when(
+      death_dereg_diff_TPP == 0 ~ "0",
+      
+      death_dereg_diff_TPP >= 1 & death_dereg_diff_TPP <= 7 ~ "1-7",
+      death_dereg_diff_TPP >= 8 & death_dereg_diff_TPP <= 31 ~ "8-31",
+      death_dereg_diff_TPP >= 32 ~ "32+",
+      
+      death_dereg_diff_TPP <= -1 & death_dereg_diff_TPP >= -7 ~ "-1 to -7",
+      death_dereg_diff_TPP <= -8 & death_dereg_diff_TPP >= -31 ~ "-8 to -31",
+      death_dereg_diff_TPP <= -32 ~ "-32+",      
+      
+      TRUE ~ NA_character_
+    ),
+    DoD_dereg_TPP_group = case_when(
+      death_dereg_diff_TPP == 0 ~ "0",
+      
+      death_dereg_diff_TPP >= 1 & death_dereg_diff_TPP <= 7 ~ "1-7",
+      death_dereg_diff_TPP >= 8 & death_dereg_diff_TPP <= 31 ~ "8-31",
+      death_dereg_diff_TPP >= 32 ~ "32+",
+      
+      death_dereg_diff_TPP <= -1 & death_dereg_diff_TPP >= -7 ~ "-1 to -7",
+      death_dereg_diff_TPP <= -8 & death_dereg_diff_TPP >= -31 ~ "-8 to -31",
+      death_dereg_diff_TPP <= -32 ~ "-32+",      
+      
+      TRUE ~ NA_character_
+    ),  
+    DoD_dereg_ONS_group = case_when(
+      death_dereg_diff_ONS == 0 ~ "0",
+      
+      death_dereg_diff_ONS >= 1 & death_dereg_diff_ONS <= 7 ~ "1-7",
+      death_dereg_diff_ONS >= 8 & death_dereg_diff_ONS <= 31 ~ "8-31",
+      death_dereg_diff_ONS >= 32 ~ "32+",
+      
+      death_dereg_diff_ONS <= -1 & death_dereg_diff_ONS >= -7 ~ "-1 to -7",
+      death_dereg_diff_ONS <= -8 & death_dereg_diff_ONS >= -31 ~ "-8 to -31",
+      death_dereg_diff_ONS <= -32 ~ "-32+",      
+      
+      TRUE ~ NA_character_
+    )  
   )
 
 # Rounding function
@@ -235,6 +283,34 @@ table_source_general_2025 <- DoD_diff_dataset %>%
 collate_death_source_table_spec_periods <- bind_rows(table_source_general_2025, table_source_general_20_24)
 
 write.csv(collate_death_source_table_spec_periods, here::here("output", "report", "collate_death_source_table_spec_periods.csv"))
+
+# Diff deregistration - death ---------------------------------
+by_year_dereg <- DoD_diff_dataset %>%
+  select(
+    year_pref_ONS,
+    DoD_dereg_ONS_group,
+    DoD_dereg_TPP_group
+  ) %>%
+  pivot_longer(
+    cols = c(DoD_dereg_ONS_group, DoD_dereg_TPP_group),
+    names_to = "source",
+    values_to = "dereg_group"
+  ) %>%
+  mutate(
+    source = case_when(
+      source == "DoD_dereg_ONS_group" ~ "ONS",
+      source == "DoD_dereg_TPP_group" ~ "TPP",
+      TRUE ~ source
+    )
+  ) %>%
+  group_by(year_pref_ONS, source, dereg_group) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  group_by(year_pref_ONS, source) %>%
+  mutate(
+    total_year_source = sum(n),
+    prop = n / total_year_source
+  ) %>%
+  ungroup()
 
 # Practice source
 # table_source_practice <- table_source_by_subgroup(
