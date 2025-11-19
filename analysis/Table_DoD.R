@@ -285,7 +285,7 @@ collate_death_source_table_spec_periods <- bind_rows(table_source_general_2025, 
 write.csv(collate_death_source_table_spec_periods, here::here("output", "report", "collate_death_source_table_spec_periods.csv"))
 
 # Diff deregistration - death ---------------------------------
-by_year_dereg <- DoD_diff_dataset %>%
+by_year_dereg_DoD_diff <- DoD_diff_dataset %>%
   select(
     year_pref_ONS,
     DoD_dereg_ONS_group,
@@ -311,7 +311,7 @@ by_year_dereg <- DoD_diff_dataset %>%
     prop = n / total_year_source
   ) %>%
   ungroup()
-
+write.csv(by_year_dereg_DoD_diff, here::here("output", "report", "by_year_dereg_DoD_diff.csv"))
 # Practice source
 # table_source_practice <- table_source_by_subgroup(
 #   DoD_diff_dataset[DoD_diff_dataset$year_pref_ONS == 2024, ],
