@@ -35,7 +35,7 @@ year_start_DoD = earliest_DoD.to_first_of_year()
 
 
 ## Include people registered with a TPP practice
-has_registration = practice_registrations.for_patient_on(year_start_DoD).exists_for_patient() |  ((patients.date_of_birth.year == year_start_DoD.year) & practice_registrations.for_patient_on(earliest_DoD).exists_for_patient())
+# has_registration = practice_registrations.for_patient_on(year_start_DoD).exists_for_patient() |  ((patients.date_of_birth.year == year_start_DoD.year) & practice_registrations.for_patient_on(earliest_DoD).exists_for_patient())
 
 ## Exclude people >110 years due to risk of incorrectly recorded age;
 has_possible_age= ((patients.age_on(year_start_DoD) < 110) & (patients.age_on(year_start_DoD) > 0)) | (patients.date_of_birth.year == year_start_DoD.year)
@@ -43,49 +43,21 @@ has_possible_age= ((patients.age_on(year_start_DoD) < 110) & (patients.age_on(ye
 ## Exclude people with non-male or female sex due to disclosure risk;
 non_disclosive_sex= (patients.sex == "male") | (patients.sex == "female")
 
-# Died during study and while registered
-## Last deregistration date per patient
-last_registration_end = (
-    practice_registrations
-    .sort_by(
-        practice_registrations.start_date,
-        practice_registrations.end_date
-    )
-    .last_for_patient()
-    .end_date
-)
-
-## TPP death during study and while registered
-tpp_death_during_study = (
-    patients.date_of_death.is_on_or_after(start_date) &
-    patients.date_of_death.is_on_or_before(end_date) &    
-    (
-        patients.date_of_death.is_on_or_before(last_registration_end + days(30)) |
-        last_registration_end.is_null()
-    )
-)
-
-# ONS death during study and while registered, allowing for missing end_date
-ons_death_during_study = (
-    ons_deaths.date.is_on_or_after(start_date) &
-    ons_deaths.date.is_on_or_before(end_date) &    
-    (
-        ons_deaths.date.is_on_or_before(last_registration_end) |
-        last_registration_end.is_null()
-    )
-)
-
+# TPP death
+tpp_death_anytime = patients.date_of_death.is_not_null()
+# ONS death
+ons_death_anytime = ons_deaths.date.is_not_null()
 
 # Combine both ONS/TPP
-died_during_study = tpp_death_during_study | ons_death_during_study
+died_anytime = tpp_death_anytime | ons_death_anytime
 
 # define dataset poppulation
 dataset.define_population(
     #was_alive & 
-    has_registration & 
+    #has_registration & 
     has_possible_age & 
     non_disclosive_sex &
-    died_during_study
+    died_anytime
     )
 
 # Variables
@@ -158,7 +130,53 @@ dataset.ethnicity = clinical_events.where(
 # Sex
 dataset.sex = patients.sex
 
-# last End date
-dataset.last_registration_end = last_registration_end
+
+## Last registration date per patient
+last_registration = (
+    practice_registrations
+    .sort_by(
+        practice_registrations.start_date,
+        practice_registrations.end_date
+    )
+    .last_for_patient()
+)
+
+# last registration start date
+dataset.last_registration_start_date = last_registration.start_date
+
+# last registration end date
+dataset.last_registration_end_date = last_registration.end_date
 
 
+# Died during study and while registered
+## TPP death during study and while registered
+tpp_death_during_study = (
+    patients.date_of_death.is_on_or_after(start_date) &
+    patients.date_of_death.is_on_or_before(end_date) &    
+    (
+        patients.date_of_death.is_on_or_before(last_registration.end_date + days(30)) |
+        last_registration.end_date.is_null()
+    )
+)
+
+dataset.tpp_death_during_study = tpp_death_during_study
+
+# ONS death during study and while registered, allowing for missing end_date
+ons_death_during_study = (
+    ons_deaths.date.is_on_or_after(start_date) &
+    ons_deaths.date.is_on_or_before(end_date) &    
+    (
+        ons_deaths.date.is_on_or_before(last_registration.end_date  + days(30)) |
+        last_registration.end_date.is_null()
+    )
+)
+
+dataset.ons_death_during_study = ons_death_during_study
+
+# died during study any (ONS or TPP)
+
+dataset.any_death_during_study = ons_death_during_study | tpp_death_during_study
+
+
+## Include people registered with a TPP practice
+dataset.has_registration = practice_registrations.for_patient_on(year_start_DoD).exists_for_patient() |  ((patients.date_of_birth.year == year_start_DoD.year) & practice_registrations.for_patient_on(earliest_DoD).exists_for_patient())

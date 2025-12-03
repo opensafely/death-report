@@ -9,7 +9,7 @@ library("here")
 
 
 ## Create output directory
-output_dir <- here("output", "report")
+output_dir <- here("output", "report", "table_DoD")
 fs::dir_create(output_dir)
 
 # Import processed data ----
@@ -25,19 +25,31 @@ dataset0 <- read_csv("output/dataset_death_date_diff.csv.gz") %>%
     IMD_q10 = as.factor(IMD_q10),
     ethnicity = as.factor(ethnicity),
     sex = as.factor(sex),
-    last_registration_end_date = as.Date(last_registration_end)
-  )
+    last_registration_start_date = as.Date(last_registration_start_date),
+    last_registration_end_date = as.Date(last_registration_end_date)
+  ) %>% 
+  filter(
+    has_registration == TRUE & # was registered at the beginning of the year the person died
+    any_death_during_study == TRUE # died between "2009-01-01" - "2025-06-06" + (deregistration date + 30 days) is after one date of death
+    )
 
+# Rounding function
 
+rounding <- function(vars) {
+  case_when(vars == 0 ~ 0,
+            vars > 7 ~ round(vars / 5) * 5)
+}
+
+# -----------------------
 # Create variables
 DoD_diff_dataset <- dataset0 %>%
   mutate(
     death_dereg_diff_TPP = case_when(
-      !is.na(last_registration_end) ~ as.Date(last_registration_end) - TPP_death_date,
+      !is.na(last_registration_end_date) ~ as.Date(last_registration_end_date) - TPP_death_date,
       TRUE ~ as.difftime(NA_real_, units = "days"
       )),
     death_dereg_diff_ONS = case_when(
-      !is.na(last_registration_end) ~ as.Date(last_registration_end) - ons_death_date,
+      !is.na(last_registration_end_date) ~ as.Date(last_registration_end_date) - ons_death_date,
       TRUE ~ as.difftime(NA_real_, units = "days"
       )),
     DoD_min = pmin(TPP_death_date, ons_death_date, na.rm = TRUE),
@@ -116,12 +128,6 @@ DoD_diff_dataset <- dataset0 %>%
     )  
   )
 
-# Rounding function
-
-rounding <- function(vars) {
-  case_when(vars == 0 ~ 0,
-            vars > 7 ~ round(vars / 5) * 5)
-}
 
 
 
@@ -183,7 +189,7 @@ DoD_by_sex <- summarise_DoD_by_group(DoD_diff_dataset, sex)
 
 collate_DoD_diff_table <- rbind(table_DoD_general, DoD_by_age, DoD_by_rural_urban, DoD_by_ons_death_place, DoD_by_region, DoD_by_IMD_q10, DoD_by_ethnicity, DoD_by_sex)
 
-write.csv(collate_DoD_diff_table, here::here("output", "report", "collate_DoD_diff_table.csv"))
+write.csv(collate_DoD_diff_table, here::here("output", "report", "table_DoD", "collate_DoD_diff_table.csv"))
 
 # 2- Table by source --------------------------------------------------------------------------------------
 table_source_general <- DoD_diff_dataset %>%
@@ -241,7 +247,7 @@ collate_death_source_table <- bind_rows(
   table_source_sex
 )
 
-write.csv(collate_death_source_table, here::here("output", "report", "collate_death_source_table.csv"))
+write.csv(collate_death_source_table, here::here("output", "report", "table_DoD", "collate_death_source_table.csv"))
 
 
 # % by source 2020-2024
@@ -282,36 +288,37 @@ table_source_general_2025 <- DoD_diff_dataset %>%
 
 collate_death_source_table_spec_periods <- bind_rows(table_source_general_2025, table_source_general_20_24)
 
-write.csv(collate_death_source_table_spec_periods, here::here("output", "report", "collate_death_source_table_spec_periods.csv"))
+write.csv(collate_death_source_table_spec_periods, here::here("output", "report", "table_DoD","collate_death_source_table_spec_periods.csv"))
 
-# Diff deregistration - death ---------------------------------
-by_year_dereg_DoD_diff <- DoD_diff_dataset %>%
-  select(
-    year_pref_ONS,
-    DoD_dereg_ONS_group,
-    DoD_dereg_TPP_group
-  ) %>%
-  pivot_longer(
-    cols = c(DoD_dereg_ONS_group, DoD_dereg_TPP_group),
-    names_to = "source",
-    values_to = "dereg_group"
-  ) %>%
-  mutate(
-    source = case_when(
-      source == "DoD_dereg_ONS_group" ~ "ONS",
-      source == "DoD_dereg_TPP_group" ~ "TPP",
-      TRUE ~ source
-    )
-  ) %>%
-  group_by(year_pref_ONS, source, dereg_group) %>%
-  summarise(n = n(), .groups = "drop") %>%
-  group_by(year_pref_ONS, source) %>%
-  mutate(
-    total_year_source = sum(n),
-    prop = n / total_year_source
-  ) %>%
-  ungroup()
-write.csv(by_year_dereg_DoD_diff, here::here("output", "report", "by_year_dereg_DoD_diff.csv"))
+# # Diff deregistration - death ---------------------------------
+# by_year_dereg_DoD_diff <- DoD_diff_dataset %>%
+#   select(
+#     year_pref_ONS,
+#     DoD_dereg_ONS_group,
+#     DoD_dereg_TPP_group
+#   ) %>%
+#   pivot_longer(
+#     cols = c(DoD_dereg_ONS_group, DoD_dereg_TPP_group),
+#     names_to = "source",
+#     values_to = "dereg_group"
+#   ) %>%
+#   mutate(
+#     source = case_when(
+#       source == "DoD_dereg_ONS_group" ~ "ONS",
+#       source == "DoD_dereg_TPP_group" ~ "TPP",
+#       TRUE ~ source
+#     )
+#   ) %>%
+#   group_by(year_pref_ONS, source, dereg_group) %>%
+#   summarise(n = n(), .groups = "drop") %>%
+#   group_by(year_pref_ONS, source) %>%
+#   mutate(
+#     total_year_source = sum(n),
+#     prop = n / total_year_source
+#   ) %>%
+#   ungroup()
+# write.csv(by_year_dereg_DoD_diff, here::here("output", "report", "by_year_dereg_DoD_diff.csv"))
+
 # Practice source
 # table_source_practice <- table_source_by_subgroup(
 #   DoD_diff_dataset[DoD_diff_dataset$year_pref_ONS == 2024, ],

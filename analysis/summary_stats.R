@@ -26,7 +26,7 @@ DoD_diff <- read_csv("output/dataset_death_date_diff.csv.gz") %>%
   ) %>%
   mutate(
     death_dereg_diff = case_when(
-      !is.na(last_registration_end) ~ as.Date(last_registration_end) - min_DoD,
+      !is.na(last_registration_end_date) ~ as.Date(last_registration_end_date) - min_DoD,
       TRUE ~ as.difftime(NA_real_, units = "days"
       )
     )
