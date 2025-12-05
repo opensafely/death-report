@@ -10,22 +10,28 @@ actions:
   
   summary_stat:
     run: r:v2 analysis/summary_stats.R
-      --output output/DoD/summary_stats_DoD.csv 
+      --output output/DoD/*.csv 
     needs: [dataset_death_date_diff]
     outputs:
       moderately_sensitive:
-        continuous: output/DoD/summary_stats_DoD.csv
-        categorical: output/DoD/table_freq_DoD.csv
+        tables: output/DoD/*.csv
+
+  reg_dereg_ONS_TPP:
+    run: r:v2 analysis/tables_ONS_TPP_reg_dereg.R
+      --output output/report/reg_dereg_ONS_TPP/*.csv 
+    needs: [dataset_death_date_diff]
+    outputs:
+      moderately_sensitive:
+        csv: output/report/reg_dereg_ONS_TPP/*.csv
 
   table_DoD:
     run: r:v2 analysis/Table_DoD.R
-      --output output/report/*.csv 
+      --output output/report/table_DoD/*.csv 
     needs: [dataset_death_date_diff]
     outputs:
       moderately_sensitive:
-        categorical1: output/report/collate_death_source_table.csv
-        categorical2: output/report/collate_DoD_diff_table.csv
-        categorical3: output/report/collate_death_source_table_spec_periods.csv
+        csv: output/report/table_DoD/*.csv
+
 
   visualization:
     run:  r:v2 Final-visualizations.R
@@ -35,6 +41,14 @@ actions:
         csv: output/final_visualization/*.csv
         png: output/final_visualization/*.png 
 
+  table_DoD_without_grace_period:
+    run: r:v2 analysis/Table_DoD_without_grace_period.R
+      --output output/report/without_grace_period/*.csv 
+    needs: [dataset_death_date_diff]
+    outputs:
+      moderately_sensitive:
+        csv: output/report/without_grace_period/*.csv
+        
 # Measures
   measures_overall:
     run: ehrql:v1 generate-measures analysis/measure_def.py 
@@ -63,5 +77,5 @@ actions:
     needs: [measures_by_practice]
     outputs:
       moderately_sensitive:
-        csv: output/report/*.csv
-        png: output/report/*.png 
+        csv: output/report/deciles/*.csv
+        png: output/report/deciles/*.png 

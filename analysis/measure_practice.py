@@ -7,7 +7,7 @@
 #   University of Oxford, 2025
 ###################################################
 
-from ehrql import INTERVAL, create_measures, years, case, when, months, show
+from ehrql import INTERVAL, create_measures, years, case, when, days
 from ehrql.tables.tpp import patients, practice_registrations, ons_deaths, addresses
 
  
@@ -28,7 +28,7 @@ last_registration_end = (
 GP_death_in_interval = (
     patients.date_of_death.is_during(INTERVAL) &
     (
-        patients.date_of_death.is_on_or_before(last_registration_end) |
+        patients.date_of_death.is_on_or_before(last_registration_end  + days(30) )|
         last_registration_end.is_null()
     )
 )
@@ -36,7 +36,7 @@ GP_death_in_interval = (
 ONS_death_in_interval = (
     ons_deaths.date.is_during(INTERVAL) &
     (
-        ons_deaths.date.is_on_or_before(last_registration_end) |
+        ons_deaths.date.is_on_or_before(last_registration_end   + days(30)) |
         last_registration_end.is_null()
     )
 )

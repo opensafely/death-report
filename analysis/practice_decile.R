@@ -12,7 +12,7 @@ library(glue)
 library(here)
 
 ## Create output directory
-output_dir <- here::here("output", "report")
+output_dir <- here::here("output", "report", "deciles")
 fs::dir_create(output_dir)
 
 # Import processed data ----
