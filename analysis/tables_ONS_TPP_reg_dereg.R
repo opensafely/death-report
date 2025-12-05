@@ -69,6 +69,7 @@ dataset <- dataset0 %>%
       ons_death_reg > 0    ~ "last_reg_before_death"
     ),
     ons_death_dereg_group = case_when(
+      is.na(last_registration_end_date) & !is.na(ons_death_date) ~ "missing_last_reg_end",
       is.na(ons_death_dereg)                            ~ NA_character_,
       ons_death_dereg <= -32                            ~ "< -32",
       ons_death_dereg >= -31 & ons_death_dereg <= -8    ~ "-31 to -8",
@@ -85,6 +86,7 @@ dataset <- dataset0 %>%
       TPP_death_reg > 0    ~ "last_reg_before_death"
     ),
     TPP_death_dereg_group = case_when(
+      is.na(last_registration_end_date) & !is.na(TPP_death_date) ~ "missing_last_reg_end",
       is.na(TPP_death_dereg)                            ~ NA_character_,
       TPP_death_dereg <= -32                            ~ "< -32",
       TPP_death_dereg >= -31 & TPP_death_dereg <= -8    ~ "-31 to -8",
@@ -149,3 +151,57 @@ TPP_death_dereg_group <- dataset %>%
   summarise(n = rounding(n()), .groups = "drop")
 
 write.csv(TPP_death_dereg_group, here::here("output", "report", "reg_dereg_ONS_TPP", "TPP_death_dereg_group.csv"))
+
+
+
+
+# granular table not for release
+
+# Granular table: daily difference deregistration - death for ONS
+ons_death_dereg_daily <- dataset %>%
+  filter(
+    !is.na(ons_death_date),
+    !is.na(last_registration_end_date),
+    !is.na(ons_death_dereg),
+    ons_death_dereg >= -30,
+    ons_death_dereg <= 30
+  ) %>%
+  group_by(
+    ons_death_year = year(ons_death_date),
+    ons_death_dereg
+  ) %>%
+  summarise(
+    n = n(),   # no rounding
+    .groups = "drop"
+  )
+
+write.csv(
+  ons_death_dereg_daily,
+  here::here("output", "report", "reg_dereg_ONS_TPP", "ons_death_dereg_daily.csv"),
+  row.names = FALSE
+)
+
+# Granular table: daily difference deregistration - death for TPP
+TPP_death_dereg_daily <- dataset %>%
+  filter(
+    !is.na(TPP_death_date),
+    has_registration == TRUE,
+    !is.na(last_registration_end_date),
+    !is.na(TPP_death_dereg),
+    TPP_death_dereg >= -30,
+    TPP_death_dereg <= 30
+  ) %>%
+  group_by(
+    TPP_death_year = year(TPP_death_date),
+    TPP_death_dereg
+  ) %>%
+  summarise(
+    n = n(),   # no rounding 
+    .groups = "drop"
+  )
+
+write.csv(
+  TPP_death_dereg_daily,
+  here::here("output", "report", "reg_dereg_ONS_TPP", "TPP_death_dereg_daily.csv"),
+  row.names = FALSE
+)
