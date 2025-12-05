@@ -132,7 +132,7 @@ impossible_dod_month <- DoD_diff %>%
 
 write.csv(
   impossible_dod_month,
-  here::here("output", "report", "impossible_dod_month.csv"),
+  here::here("output", "DoD", "impossible_dod_month.csv"),
   row.names = FALSE
 )
 # # plots
