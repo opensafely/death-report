@@ -72,7 +72,7 @@ global_denominator =  ( (was_alive_ONS | was_alive_GP)
                        & non_disclosive_sex) 
 
 #Specify intervals
-intervals = years(20).starting_on("2005-01-01")
+intervals = years(20).starting_on("2009-01-01")
 
 
 #Subgroups
