@@ -310,7 +310,7 @@ by_year_dereg_DoD_diff <- DoD_diff_dataset %>%
     )
   ) %>%
   group_by(year_pref_ONS, source, dereg_group) %>%
-  summarise(n = n(), .groups = "drop") %>%
+  summarise(n = rounding(n()), .groups = "drop") %>%
   group_by(year_pref_ONS, source) %>%
   mutate(
     total_year_source = sum(n),
