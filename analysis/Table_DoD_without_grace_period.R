@@ -317,9 +317,10 @@ by_year_dereg_DoD_diff_without_grace_period <- DoD_diff_without_grace_period_dat
   summarise(n = rounding(n()), .groups = "drop") %>%
   group_by(year_pref_ONS, source) %>%
   mutate(
-    total_year_source = n,
+    total_year_source = sum(n),
     prop = n / total_year_source
   ) %>%
   ungroup()
+  
 write.csv(by_year_dereg_DoD_diff_without_grace_period, here::here("output", "report", "without_grace_period", "by_year_dereg_DoD_diff_without_grace_period.csv"))
 
