@@ -180,3 +180,21 @@ dataset.any_death_during_study = ons_death_during_study | tpp_death_during_study
 
 ## Include people registered with a TPP practice
 dataset.has_registration = practice_registrations.for_patient_on(year_start_DoD).exists_for_patient() |  ((patients.date_of_birth.year == year_start_DoD.year) & practice_registrations.for_patient_on(earliest_DoD).exists_for_patient())
+
+
+# Coded date of death
+death_coded = codelist_from_csv(
+  "codelists/nhsd-primary-care-domain-refsets-death_cod.csv",
+  column="code")
+
+dataset.death_coded_date = clinical_events.where(
+        clinical_events.snomedct_code.is_in(death_coded)
+        ).sort_by(clinical_events.date).last_for_patient().date
+
+# Dummy data configuration
+dataset.configure_dummy_data(population_size=10000, timeout=180,
+                             additional_population_constraint=(
+                                 dataset.TPP_death_date.is_on_or_between("2020-01-01","2020-05-01") & 
+                                 dataset.death_coded_date.is_on_or_between("2020-01-01","2020-05-01")
+                                 )
+                                 )

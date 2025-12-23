@@ -26,7 +26,8 @@ dataset0 <- read_csv("output/dataset_death_date_diff.csv.gz") %>%
     ethnicity = as.factor(ethnicity),
     sex = as.factor(sex),
     last_registration_start_date = as.Date(last_registration_start_date),
-    last_registration_end_date = as.Date(last_registration_end_date)
+    last_registration_end_date = as.Date(last_registration_end_date),
+    death_coded_date = as.Date(death_coded_date)
   ) %>% 
   filter(
     has_registration == TRUE & # was registered at the beginning of the year the person died
@@ -39,6 +40,7 @@ rounding <- function(vars) {
   case_when(vars == 0 ~ 0,
             vars > 7 ~ round(vars / 5) * 5)
 }
+
 
 # -----------------------
 # Create variables
@@ -56,6 +58,8 @@ DoD_diff_dataset <- dataset0 %>%
     diff_DoD = TPP_death_date - ons_death_date,
     TPP_death = case_when(!is.na(TPP_death_date) ~ "yes",
                           TRUE ~ NA_character_),
+    TPP_date_code_death = case_when(!is.na(TPP_death_date) | !is.na(death_coded_date) ~ "yes",
+                          TRUE ~ NA_character_),    
     ONS_death = case_when(!is.na(ons_death_date) ~ "yes",
                           TRUE ~ NA_character_),
     rural_urb_recode = case_when(
@@ -64,6 +68,11 @@ DoD_diff_dataset <- dataset0 %>%
       TRUE ~ NA_character_
     ),
     year_pref_ONS = if_else(!is.na(ons_death_date), year(ons_death_date), year(TPP_death_date)),
+    year_pref_ONS_TPP_plus_codes = case_when(
+      !is.na(ons_death_date)   ~ year(ons_death_date),
+      !is.na(TPP_death_date)   ~ year(TPP_death_date),
+      !is.na(death_coded_date) ~ year(death_coded_date)
+    ),
     year_month_pref_ONS = if_else(!is.na(ons_death_date), format(ons_death_date, "%Y-%m"), format(TPP_death_date, "%Y-%m")
     )
   ) %>%
@@ -73,6 +82,12 @@ DoD_diff_dataset <- dataset0 %>%
       !is.na(ONS_death) & is.na(TPP_death) ~ "ONS",
       !is.na(TPP_death) & is.na(ONS_death) ~ "TPP",
       is.na(TPP_death) & is.na(ONS_death) ~ NA_character_
+    ),
+    ONS_or_TPP_date_or_codes = case_when(
+      !is.na(ONS_death) & !is.na(TPP_date_code_death) ~ "ONS & TPP",
+      !is.na(ONS_death) & is.na(TPP_date_code_death) ~ "ONS",
+      !is.na(TPP_date_code_death) & is.na(ONS_death) ~ "TPP",
+      is.na(TPP_date_code_death) & is.na(ONS_death) ~ NA_character_
     ),
     DoD_groups = case_when(
       diff_DoD == 0 ~ "0",
@@ -207,6 +222,22 @@ table_source_general <- DoD_diff_dataset %>%
   select(year_pref_ONS, ONS_or_TPP, count, group_var, group_value)
 
 
+# % by source including TPP coded deaths
+table_source_general_plus_codes <- DoD_diff_dataset %>%
+  group_by(year_pref_ONS_TPP_plus_codes) %>%
+  mutate(total = rounding(n())) %>% 
+  group_by(year_pref_ONS_TPP_plus_codes, ONS_or_TPP_date_or_codes, total) %>%
+  summarise(
+    count = rounding(n()),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    group_var = "general population plus codes",
+    group_value = "general population plus codes"
+  ) %>%
+  select(year_pref_ONS_TPP_plus_codes, ONS_or_TPP_date_or_codes, count, group_var, group_value)
+
+#source by subgroup
 table_source_by_subgroup <- function(data, group_var) {
   group_var_name <- deparse(substitute(group_var))
   
@@ -237,7 +268,8 @@ table_source_sex       <- table_source_by_subgroup(DoD_diff_dataset, sex)
 
 
 collate_death_source_table <- bind_rows(
-  table_source_general,                                   
+  table_source_general, 
+  table_source_general_plus_codes,
   table_source_age,
   table_source_ethnicity,
   table_source_region,
@@ -248,6 +280,9 @@ collate_death_source_table <- bind_rows(
 )
 
 write.csv(collate_death_source_table, here::here("output", "report", "table_DoD", "collate_death_source_table.csv"))
+
+
+
 
 
 # % by source 2020-2024
