@@ -61,7 +61,7 @@ base <- dataset_measure_practice %>%
 # Count contributing practices per year ----
 n_by_year <- base %>%
   group_by(year) %>%
-  summarise(n_practices = n_distinct(practice), .groups = "drop")
+  summarise(n_practices = rounding(n_distinct(practice)), .groups = "drop")
 
 # Deciles per year
 df_quantiles <- base %>%
@@ -108,7 +108,7 @@ ggsave(fs::path(output_dir, glue("practice_deciles_TPP_perc.png")), plot = pract
 pract_deaths_population <- dataset_measure_practice %>%
   group_by(year) %>%
   summarise(
-    practices_total = n_distinct(practice),
+    practices_total = rounding(n_distinct(practice)),
     practices_den_less_1000 = rounding(sum(is.na(global_denominator) | global_denominator < 1000)),
     practices_zero_deaths   = rounding(sum(global_numerator == 0L, na.rm = TRUE)),
     practices_den_gt_1000_zero_deaths = rounding(sum((global_denominator > 1000) & (global_numerator == 0L), na.rm = TRUE)),
