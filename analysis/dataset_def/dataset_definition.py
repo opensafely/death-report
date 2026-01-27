@@ -194,7 +194,7 @@ dataset.death_coded_date = clinical_events.where(
 # Dummy data configuration
 dataset.configure_dummy_data(population_size=10000, timeout=180,
                              additional_population_constraint=(
-                                 dataset.TPP_death_date.is_on_or_between("2020-01-01","2020-05-01") & 
-                                 dataset.death_coded_date.is_on_or_between("2020-01-01","2020-05-01")
+                                 dataset.TPP_death_date.is_on_or_between("2009-01-01","2025-05-01") & 
+                                 dataset.death_coded_date.is_on_or_between("2019-01-01","2025-05-01")
                                  )
                                  )
