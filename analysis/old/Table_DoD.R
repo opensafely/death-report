@@ -9,7 +9,7 @@ library("here")
 
 
 ## Create output directory
-output_dir <- here("output", "report", "without_grace_period")
+output_dir <- here("output", "report", "table_DoD")
 fs::dir_create(output_dir)
 
 # Import processed data ----
@@ -26,7 +26,8 @@ dataset0 <- read_csv("output/dataset_death_date_diff.csv.gz") %>%
     ethnicity = as.factor(ethnicity),
     sex = as.factor(sex),
     last_registration_start_date = as.Date(last_registration_start_date),
-    last_registration_end_date = as.Date(last_registration_end_date)
+    last_registration_end_date = as.Date(last_registration_end_date),
+    death_coded_date = as.Date(death_coded_date)
   ) %>% 
   filter(
     has_registration == TRUE & # was registered at the beginning of the year the person died
@@ -40,9 +41,10 @@ rounding <- function(vars) {
             vars > 7 ~ round(vars / 5) * 5)
 }
 
+
 # -----------------------
 # Create variables
-DoD_diff_without_grace_period_dataset <- dataset0 %>%
+DoD_diff_dataset <- dataset0 %>%
   mutate(
     death_dereg_diff_TPP = case_when(
       !is.na(last_registration_end_date) ~ as.Date(last_registration_end_date) - TPP_death_date,
@@ -56,6 +58,8 @@ DoD_diff_without_grace_period_dataset <- dataset0 %>%
     diff_DoD = TPP_death_date - ons_death_date,
     TPP_death = case_when(!is.na(TPP_death_date) ~ "yes",
                           TRUE ~ NA_character_),
+    TPP_date_code_death = case_when(!is.na(TPP_death_date) | !is.na(death_coded_date) ~ "yes",
+                          TRUE ~ NA_character_),    
     ONS_death = case_when(!is.na(ons_death_date) ~ "yes",
                           TRUE ~ NA_character_),
     rural_urb_recode = case_when(
@@ -64,6 +68,11 @@ DoD_diff_without_grace_period_dataset <- dataset0 %>%
       TRUE ~ NA_character_
     ),
     year_pref_ONS = if_else(!is.na(ons_death_date), year(ons_death_date), year(TPP_death_date)),
+    year_pref_ONS_TPP_plus_codes = case_when(
+      !is.na(ons_death_date)   ~ year(ons_death_date),
+      !is.na(TPP_death_date)   ~ year(TPP_death_date),
+      !is.na(death_coded_date) ~ year(death_coded_date)
+    ),
     year_month_pref_ONS = if_else(!is.na(ons_death_date), format(ons_death_date, "%Y-%m"), format(TPP_death_date, "%Y-%m")
     )
   ) %>%
@@ -73,6 +82,12 @@ DoD_diff_without_grace_period_dataset <- dataset0 %>%
       !is.na(ONS_death) & is.na(TPP_death) ~ "ONS",
       !is.na(TPP_death) & is.na(ONS_death) ~ "TPP",
       is.na(TPP_death) & is.na(ONS_death) ~ NA_character_
+    ),
+    ONS_or_TPP_date_or_codes = case_when(
+      !is.na(ONS_death) & !is.na(TPP_date_code_death) ~ "ONS & TPP",
+      !is.na(ONS_death) & is.na(TPP_date_code_death) ~ "ONS",
+      !is.na(TPP_date_code_death) & is.na(ONS_death) ~ "TPP",
+      is.na(TPP_date_code_death) & is.na(ONS_death) ~ NA_character_
     ),
     DoD_groups = case_when(
       diff_DoD == 0 ~ "0",
@@ -126,11 +141,7 @@ DoD_diff_without_grace_period_dataset <- dataset0 %>%
       
       TRUE ~ NA_character_
     )  
-  ) %>%
-  filter(
-    death_dereg_diff_ONS >= 0 | death_dereg_diff_TPP >= 0
   )
-  
 
 
 
@@ -138,7 +149,7 @@ DoD_diff_without_grace_period_dataset <- dataset0 %>%
 ##### 1- Diff DoD----------------------------------------------
 
 # Table key indicators by year
-table_DoD_general_without_grace_period_dataset <- DoD_diff_without_grace_period_dataset %>%
+table_DoD_general <- DoD_diff_dataset %>%
   filter(ONS_or_TPP == "ONS & TPP") %>%
   group_by(
     year_pref_ONS
@@ -175,28 +186,28 @@ summarise_DoD_by_group <- function(data, group_var) {
 
 #tables by group
 
-DoD_by_age <- summarise_DoD_by_group(DoD_diff_without_grace_period_dataset, age_band)
+DoD_by_age <- summarise_DoD_by_group(DoD_diff_dataset, age_band)
 
-# DoD_by_practice <- summarise_DoD_by_group(DoD_diff_without_grace_period_dataset, practice)
+# DoD_by_practice <- summarise_DoD_by_group(DoD_diff_dataset, practice)
 
-DoD_by_ons_death_place <- summarise_DoD_by_group(DoD_diff_without_grace_period_dataset, ons_death_place)
+DoD_by_ons_death_place <- summarise_DoD_by_group(DoD_diff_dataset, ons_death_place)
 
-DoD_by_region <- summarise_DoD_by_group(DoD_diff_without_grace_period_dataset, region)
+DoD_by_region <- summarise_DoD_by_group(DoD_diff_dataset, region)
 
-DoD_by_rural_urban <- summarise_DoD_by_group(DoD_diff_without_grace_period_dataset, rural_urban)
+DoD_by_rural_urban <- summarise_DoD_by_group(DoD_diff_dataset, rural_urban)
 
-DoD_by_IMD_q10 <- summarise_DoD_by_group(DoD_diff_without_grace_period_dataset, IMD_q10)
+DoD_by_IMD_q10 <- summarise_DoD_by_group(DoD_diff_dataset, IMD_q10)
 
-DoD_by_ethnicity <- summarise_DoD_by_group(DoD_diff_without_grace_period_dataset, ethnicity)
+DoD_by_ethnicity <- summarise_DoD_by_group(DoD_diff_dataset, ethnicity)
 
-DoD_by_sex <- summarise_DoD_by_group(DoD_diff_without_grace_period_dataset, sex)
+DoD_by_sex <- summarise_DoD_by_group(DoD_diff_dataset, sex)
 
-collate_DoD_diff_without_grace_period_table <- rbind(table_DoD_general_without_grace_period_dataset, DoD_by_age, DoD_by_rural_urban, DoD_by_ons_death_place, DoD_by_region, DoD_by_IMD_q10, DoD_by_ethnicity, DoD_by_sex)
+collate_DoD_diff_table <- rbind(table_DoD_general, DoD_by_age, DoD_by_rural_urban, DoD_by_ons_death_place, DoD_by_region, DoD_by_IMD_q10, DoD_by_ethnicity, DoD_by_sex)
 
-write.csv(collate_DoD_diff_without_grace_period_table, here::here("output", "report", "without_grace_period", "collate_DoD_diff_without_grace_period_table.csv"))
+write.csv(collate_DoD_diff_table, here::here("output", "report", "table_DoD", "collate_DoD_diff_table.csv"))
 
 # 2- Table by source --------------------------------------------------------------------------------------
-table_source_general_without_grace_period <- DoD_diff_without_grace_period_dataset %>%
+table_source_general <- DoD_diff_dataset %>%
   group_by(year_pref_ONS) %>%
   mutate(total = rounding(n())) %>% 
   group_by(year_pref_ONS, ONS_or_TPP, total) %>%
@@ -211,6 +222,22 @@ table_source_general_without_grace_period <- DoD_diff_without_grace_period_datas
   select(year_pref_ONS, ONS_or_TPP, count, group_var, group_value)
 
 
+# % by source including TPP coded deaths
+table_source_general_plus_codes <- DoD_diff_dataset %>%
+  group_by(year_pref_ONS_TPP_plus_codes) %>%
+  mutate(total = rounding(n())) %>% 
+  group_by(year_pref_ONS_TPP_plus_codes, ONS_or_TPP_date_or_codes, total) %>%
+  summarise(
+    count = rounding(n()),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    group_var = "general population plus codes",
+    group_value = "general population plus codes"
+  ) %>%
+  select(year_pref_ONS_TPP_plus_codes, ONS_or_TPP_date_or_codes, count, group_var, group_value)
+
+#source by subgroup
 table_source_by_subgroup <- function(data, group_var) {
   group_var_name <- deparse(substitute(group_var))
   
@@ -231,17 +258,18 @@ table_source_by_subgroup <- function(data, group_var) {
 }
 
 
-table_source_age       <- table_source_by_subgroup(DoD_diff_without_grace_period_dataset, age_band)
-table_source_ethnicity <- table_source_by_subgroup(DoD_diff_without_grace_period_dataset, ethnicity)
-table_source_region    <- table_source_by_subgroup(DoD_diff_without_grace_period_dataset, region)
-table_source_place     <- table_source_by_subgroup(DoD_diff_without_grace_period_dataset, ons_death_place)
-table_source_urban     <- table_source_by_subgroup(DoD_diff_without_grace_period_dataset, rural_urban)
-table_source_IMD       <- table_source_by_subgroup(DoD_diff_without_grace_period_dataset, IMD_q10)
-table_source_sex       <- table_source_by_subgroup(DoD_diff_without_grace_period_dataset, sex)
+table_source_age       <- table_source_by_subgroup(DoD_diff_dataset, age_band)
+table_source_ethnicity <- table_source_by_subgroup(DoD_diff_dataset, ethnicity)
+table_source_region    <- table_source_by_subgroup(DoD_diff_dataset, region)
+table_source_place     <- table_source_by_subgroup(DoD_diff_dataset, ons_death_place)
+table_source_urban     <- table_source_by_subgroup(DoD_diff_dataset, rural_urban)
+table_source_IMD       <- table_source_by_subgroup(DoD_diff_dataset, IMD_q10)
+table_source_sex       <- table_source_by_subgroup(DoD_diff_dataset, sex)
 
 
-collate_death_source_table_without_grace_period <- bind_rows(
-  table_source_general_without_grace_period,                                   
+collate_death_source_table <- bind_rows(
+  table_source_general, 
+  table_source_general_plus_codes,
   table_source_age,
   table_source_ethnicity,
   table_source_region,
@@ -251,11 +279,14 @@ collate_death_source_table_without_grace_period <- bind_rows(
   table_source_sex
 )
 
-write.csv(collate_death_source_table_without_grace_period, here::here("output", "report", "without_grace_period", "collate_death_source_table_without_grace_period.csv"))
+write.csv(collate_death_source_table, here::here("output", "report", "table_DoD", "collate_death_source_table.csv"))
+
+
+
 
 
 # % by source 2020-2024
-table_source_general_20_24_without_grace_period <- DoD_diff_without_grace_period_dataset %>%
+table_source_general_20_24 <- DoD_diff_dataset %>%
   filter(year_pref_ONS > 2019 & year_pref_ONS < 2025) %>% 
   group_by(ONS_or_TPP) %>%
   summarise(
@@ -272,7 +303,7 @@ table_source_general_20_24_without_grace_period <- DoD_diff_without_grace_period
 
 
 # % by source 01-01-2025 to 06-06-2024 by month
-table_source_general_2025_without_grace_period <- DoD_diff_without_grace_period_dataset %>%
+table_source_general_2025 <- DoD_diff_dataset %>%
   filter(year_pref_ONS > 2023 & year_month_pref_ONS != "2025-06") %>% 
   group_by(year_month_pref_ONS) %>%
   mutate(total = rounding(n())) %>% 
@@ -290,12 +321,12 @@ table_source_general_2025_without_grace_period <- DoD_diff_without_grace_period_
   ) %>% 
   select(period, ONS_or_TPP, count, group_var, group_value)
 
-collate_death_source_table_spec_periods_without_grace_period <- bind_rows(table_source_general_2025_without_grace_period, table_source_general_20_24_without_grace_period)
+collate_death_source_table_spec_periods <- bind_rows(table_source_general_2025, table_source_general_20_24)
 
-write.csv(collate_death_source_table_spec_periods_without_grace_period, here::here("output", "report", "without_grace_period", "collate_death_source_table_spec_periods_without_grace_period.csv"))
+write.csv(collate_death_source_table_spec_periods, here::here("output", "report", "table_DoD", "collate_death_source_table_spec_periods.csv"))
 
 # Diff deregistration - death ---------------------------------
-by_year_dereg_DoD_diff_without_grace_period <- DoD_diff_without_grace_period_dataset %>%
+by_year_dereg_DoD_diff <- DoD_diff_dataset %>%
   select(
     year_pref_ONS,
     DoD_dereg_ONS_group,
@@ -321,6 +352,113 @@ by_year_dereg_DoD_diff_without_grace_period <- DoD_diff_without_grace_period_dat
     prop = n / total_year_source
   ) %>%
   ungroup()
-  
-write.csv(by_year_dereg_DoD_diff_without_grace_period, here::here("output", "report", "without_grace_period", "by_year_dereg_DoD_diff_without_grace_period.csv"))
+write.csv(by_year_dereg_DoD_diff, here::here("output", "report", "table_DoD", "by_year_dereg_DoD_diff.csv"))
 
+# Practice source
+# table_source_practice <- table_source_by_subgroup(
+#   DoD_diff_dataset[DoD_diff_dataset$year_pref_ONS == 2024, ],
+#   practice
+# )
+
+# # -----------------------------------------------------------------------------------------
+# 
+# #Line plot number of death
+# ggplot(table_source, aes(x = year_pref_ONS, y = count, color = ONS_or_TPP, group = ONS_or_TPP)) +
+#   geom_line(linewidth = 1) +
+#   scale_color_viridis_d(name = "Source") +
+#   labs(
+#     x = "Year of Death",
+#     y = "Number of Deaths",
+#     title = "Death Records by Source (ONS, TPP, or Both)"
+#   ) +
+#   theme_minimal(base_size = 14)
+# 
+# #Stock bar number death
+# ggplot(table_source, aes(x = factor(year_pref_ONS), y = count, fill = ONS_or_TPP)) +
+#   geom_bar(stat = "identity") +
+#   scale_fill_viridis_d(name = "Source") +
+#   labs(
+#     x = "Year of Death (ONS)",
+#     y = "Number of Deaths",
+#     title = "Deaths by Year and Source (ONS, TPP or Both)"
+#   ) +
+#   theme_minimal(base_size = 14) +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+# 
+# # Line percentage -> best
+# ggplot(table_source, aes(x = year_pref_ONS, y = perc_source, color = ONS_or_TPP, group = ONS_or_TPP)) +
+#   geom_line(linewidth = 1) +
+#   scale_color_viridis_d(name = "Source") +
+#   labs(
+#     x = "Year of Death",
+#     y = "Number of Deaths",
+#     title = "Death Records by Source (ONS, TPP, or Both)"
+#   ) +
+#   theme_minimal(base_size = 14)
+# 
+# 
+# # % days diff
+# table_perc_DoD <- DoD_diff_dataset %>%
+#   filter(ONS_or_TPP == "ONS & TPP") %>% 
+#   group_by(year_pref_ONS) %>% 
+#   mutate (total = n()) %>% 
+#   ungroup() %>% 
+#   group_by(year_pref_ONS, DoD_groups) %>% 
+#   summarise(
+#     DoD_group_count = n(),
+#     DoD_group_perc = n()/total*100
+#   ) %>% 
+#   unique()
+# 
+
+ 
+# # -----------------------------------------------------------------------------------------
+# 
+# #Line plot number of death
+# ggplot(table_source, aes(x = year_pref_ONS, y = count, color = ONS_or_TPP, group = ONS_or_TPP)) +
+#   geom_line(linewidth = 1) +
+#   scale_color_viridis_d(name = "Source") +
+#   labs(
+#     x = "Year of Death",
+#     y = "Number of Deaths",
+#     title = "Death Records by Source (ONS, TPP, or Both)"
+#   ) +
+#   theme_minimal(base_size = 14)
+# 
+# #Stock bar number death
+# ggplot(table_source, aes(x = factor(year_pref_ONS), y = count, fill = ONS_or_TPP)) +
+#   geom_bar(stat = "identity") +
+#   scale_fill_viridis_d(name = "Source") +
+#   labs(
+#     x = "Year of Death (ONS)",
+#     y = "Number of Deaths",
+#     title = "Deaths by Year and Source (ONS, TPP or Both)"
+#   ) +
+#   theme_minimal(base_size = 14) +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+# 
+# # Line percentage -> best
+# ggplot(table_source, aes(x = year_pref_ONS, y = perc_source, color = ONS_or_TPP, group = ONS_or_TPP)) +
+#   geom_line(linewidth = 1) +
+#   scale_color_viridis_d(name = "Source") +
+#   labs(
+#     x = "Year of Death",
+#     y = "Number of Deaths",
+#     title = "Death Records by Source (ONS, TPP, or Both)"
+#   ) +
+#   theme_minimal(base_size = 14)
+# 
+# 
+# # % days diff
+# table_perc_DoD <- DoD_diff_dataset %>%
+#   filter(ONS_or_TPP == "ONS & TPP") %>% 
+#   group_by(year_pref_ONS) %>% 
+#   mutate (total = n()) %>% 
+#   ungroup() %>% 
+#   group_by(year_pref_ONS, DoD_groups) %>% 
+#   summarise(
+#     DoD_group_count = n(),
+#     DoD_group_perc = n()/total*100
+#   ) %>% 
+#   unique()
+# 

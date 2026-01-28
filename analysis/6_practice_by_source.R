@@ -12,11 +12,11 @@ library(glue)
 library(here)
 
 ## Create output directory
-output_dir <- here::here("output", "report", "deciles")
+output_dir <- here::here("output", "report", "source_by_practice")
 fs::dir_create(output_dir)
 
 # Import processed data ----
-dataset0 <- read_csv("output/measures/measures_by_practice.csv")
+measures_by_practice <- read_csv("output/highly_sensitive/measures_by_practice.csv")
 
 
 # Rounding functionn ----------------
@@ -29,7 +29,7 @@ rounding <- function(vars) {
 
 
 # Prepare data --------------------------------------------------------
-dataset_measure_practice <- dataset0 %>%
+measure_by_practice_processed <- measures_by_practice %>%
   mutate(
     data_source = str_extract(measure, ".*(?=_mortality)"),
     year        = as.integer(lubridate::year(interval_start)),
@@ -55,13 +55,13 @@ percentiles <- as.integer(probs * 100)
 
 #Table-----
 # Practices with > 1000 and finite ratio
-base <- dataset_measure_practice %>%
+base <- measure_by_practice_processed %>%
   filter(global_denominator > 1000, is.finite(GP_global_perc))
 
 # Count contributing practices per year ----
 n_by_year <- base %>%
   group_by(year) %>%
-  summarise(n_practices = n_distinct(practice), .groups = "drop")
+  summarise(n_practices = rounding(n_distinct(practice)), .groups = "drop")
 
 # Deciles per year
 df_quantiles <- base %>%
@@ -105,10 +105,10 @@ ggsave(fs::path(output_dir, glue("practice_deciles_TPP_perc.png")), plot = pract
 
 #------------------------------------
 # Table: practices with 0 deaths and less than 1000 people
-pract_deaths_population <- dataset_measure_practice %>%
+pract_deaths_population <- measure_by_practice_processed %>%
   group_by(year) %>%
   summarise(
-    practices_total = n_distinct(practice),
+    practices_total = rounding(n_distinct(practice)),
     practices_den_less_1000 = rounding(sum(is.na(global_denominator) | global_denominator < 1000)),
     practices_zero_deaths   = rounding(sum(global_numerator == 0L, na.rm = TRUE)),
     practices_den_gt_1000_zero_deaths = rounding(sum((global_denominator > 1000) & (global_numerator == 0L), na.rm = TRUE)),

@@ -13,7 +13,7 @@ output_dir <- here("output", "report", "reg_dereg_ONS_TPP")
 fs::dir_create(output_dir)
 
 # Import processed data ----
-dataset0 <- read_csv("output/dataset_death_date_diff.csv.gz") %>% 
+dataset_death_TPP_ONS <- read_csv("output/highly_sensitive/dataset_death_TPP_ONS.csv.gz") %>% 
   mutate(
     TPP_death_date = as.Date(TPP_death_date),
     ons_death_date = as.Date(ons_death_date),
@@ -38,7 +38,7 @@ rounding <- function(vars) {
 
 # Data curating ---------------
 
-dataset <- dataset0 %>%
+death_TPP_ONS_reg_dereg <- dataset_death_TPP_ONS %>%
   mutate(
     TPP_death_reg = case_when(
       !is.na(TPP_death_date) & !is.na(last_registration_start_date) ~
@@ -102,22 +102,22 @@ dataset <- dataset0 %>%
 
 # a- ONS deaths distribution across time and inclusion criteria
 
-ONS_death_year_by_reg <- dataset %>%
+ONS_reg_tpp_year <- death_TPP_ONS_reg_dereg %>%
   filter(!is.na(ons_death_date)) %>%
   group_by(ons_death_year = year(ons_death_date)) %>%
   summarise(
     any_ons_death = rounding(n()), # any ONS death
-    ons_death_regist_before = rounding(sum(has_registration == TRUE, na.rm = TRUE)), # ONS + last registration before death
-    ons_registred_during = rounding(sum(ons_death_during_study == TRUE & has_registration == TRUE, na.rm = TRUE)),
-    tpp_any = rounding(sum(!is.na(TPP_death_date), na.rm = TRUE)), # any ONS death + any TPP death
-    tpp_reg_during_study = rounding(sum(tpp_death_during_study == TRUE & has_registration == TRUE, na.rm = TRUE)), # ONS + TPP + last dereg date after death
+    ons_death_regis = rounding(sum(has_registration == TRUE, na.rm = TRUE)), # ONS + last registration before death
+    ons_regis_and_during_study = rounding(sum(ons_death_during_study == TRUE & has_registration == TRUE, na.rm = TRUE)),
+    any_ons_tpp = rounding(sum(!is.na(TPP_death_date), na.rm = TRUE)), # any ONS death + any TPP death
+    ons_tpp_regis_and_during_study = rounding(sum(tpp_death_during_study == TRUE & has_registration == TRUE, na.rm = TRUE)), # ONS + TPP + last dereg date after death
     .groups = "drop"
   )
 
-write.csv(ONS_death_year_by_reg, here::here("output", "report", "reg_dereg_ONS_TPP", "ONS_death_year_by_reg.csv"))
+write.csv(ONS_reg_tpp_year, here::here("output", "report", "reg_dereg_ONS_TPP", "ONS_reg_tpp_year.csv"))
 
 # b- Difference date of death - last registration date
-ONS_death_reg_group<- dataset %>%
+ONS_death_reg_group<- death_TPP_ONS_reg_dereg %>%
   filter(!is.na(ons_death_date)) %>%
   group_by(ons_death_year = year(ons_death_date), ons_death_reg_group) %>%
   summarise(n = rounding(n()), .groups = "drop")
@@ -125,7 +125,7 @@ ONS_death_reg_group<- dataset %>%
 write.csv(ONS_death_reg_group, here::here("output", "report", "reg_dereg_ONS_TPP", "ONS_death_reg_group.csv"))
 
 # c- Difference deregistration - death
-ons_death_dereg_group <- dataset %>%
+ons_death_dereg_group <- death_TPP_ONS_reg_dereg %>%
   filter(!is.na(ons_death_date) & has_registration == TRUE) %>%
   group_by(ons_death_year = year(ons_death_date), ons_death_dereg_group) %>%
   summarise(n = rounding(n()), .groups = "drop")
@@ -137,7 +137,7 @@ write.csv(ons_death_dereg_group, here::here("output", "report", "reg_dereg_ONS_T
 # a- NO
 
 # b- Difference date of death - last registration date
-TPP_death_reg_group<- dataset %>%
+TPP_death_reg_group<- death_TPP_ONS_reg_dereg %>%
   filter(!is.na(TPP_death_date)) %>%
   group_by(TPP_death_year = year(TPP_death_date), TPP_death_reg_group) %>%
   summarise(n = rounding(n()), .groups = "drop")
@@ -145,7 +145,7 @@ TPP_death_reg_group<- dataset %>%
 write.csv(TPP_death_reg_group, here::here("output", "report", "reg_dereg_ONS_TPP", "TPP_death_reg_group.csv"))
 
 # c- Difference deregistration - death
-TPP_death_dereg_group <- dataset %>%
+TPP_death_dereg_group <- death_TPP_ONS_reg_dereg %>%
   filter(!is.na(TPP_death_date) & has_registration == TRUE) %>%
   group_by(TPP_death_year = year(TPP_death_date), TPP_death_dereg_group) %>%
   summarise(n = rounding(n()), .groups = "drop")
@@ -158,7 +158,7 @@ write.csv(TPP_death_dereg_group, here::here("output", "report", "reg_dereg_ONS_T
 # granular table not for release
 
 # Granular table: daily difference deregistration - death for ONS
-ons_death_dereg_daily <- dataset %>%
+ons_death_dereg_daily <- death_TPP_ONS_reg_dereg %>%
   filter(
     !is.na(ons_death_date),
     !is.na(last_registration_end_date),
@@ -177,12 +177,12 @@ ons_death_dereg_daily <- dataset %>%
 
 write.csv(
   ons_death_dereg_daily,
-  here::here("output", "report", "reg_dereg_ONS_TPP", "ons_death_dereg_daily.csv"),
+  here::here("output", "report", "reg_dereg_ONS_TPP", "nr_ons_death_dereg_daily.csv"),
   row.names = FALSE
 )
 
 # Granular table: daily difference deregistration - death for TPP
-TPP_death_dereg_daily <- dataset %>%
+TPP_death_dereg_daily <- death_TPP_ONS_reg_dereg %>%
   filter(
     !is.na(TPP_death_date),
     has_registration == TRUE,
@@ -202,6 +202,6 @@ TPP_death_dereg_daily <- dataset %>%
 
 write.csv(
   TPP_death_dereg_daily,
-  here::here("output", "report", "reg_dereg_ONS_TPP", "TPP_death_dereg_daily.csv"),
+  here::here("output", "report", "reg_dereg_ONS_TPP", "nr_TPP_death_dereg_daily.csv"),
   row.names = FALSE
 )

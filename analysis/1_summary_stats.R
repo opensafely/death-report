@@ -9,11 +9,11 @@ library("here")
 library("skimr")
 
 ## Create output directory
-output_dir <- here("output", "DoD")
+output_dir <- here("output", "summary_stats")
 fs::dir_create(output_dir)
 
 # Import processed data ----
-DoD_diff <- read_csv("output/dataset_death_date_diff.csv.gz") %>%
+dataset_death_TPP_ONS <- read_csv("output/highly_sensitive/dataset_death_TPP_ONS.csv.gz") %>%
   mutate(
     region = as.factor(region),
     age_band = as.factor(age_band),
@@ -32,13 +32,13 @@ DoD_diff <- read_csv("output/dataset_death_date_diff.csv.gz") %>%
     )
   )
                                                       
-DoD_diff_plus_inc_crit <- DoD_diff %>% 
+dataset_death_TPP_ONS_plus_inc_crit <- dataset_death_TPP_ONS %>% 
   filter(
     has_registration == TRUE & # was registered at the beginning of the year the person died
       any_death_during_study == TRUE # died between "2009-01-01" - "2025-06-06" + (deregistration date + 30 days) is after one date of death
   )
 
-DoD_diff_plus_inc_crit_0_dereg_death <- DoD_diff_plus_inc_crit %>% 
+dataset_death_TPP_ONS_plus_inc_crit_0_dereg_death <- dataset_death_TPP_ONS_plus_inc_crit %>% 
   filter(
     death_dereg_diff >= 0)
     
@@ -46,55 +46,56 @@ DoD_diff_plus_inc_crit_0_dereg_death <- DoD_diff_plus_inc_crit %>%
 
 # Summary
 ## Gral
-summary_DoD_diff <- skim(DoD_diff)
+summary_dataset_death_TPP_ONS <- skim(dataset_death_TPP_ONS)
 
-summary_DoD_diff_plus_inc_crit <- skim(DoD_diff_plus_inc_crit)
+summary_dataset_death_TPP_ONS_plus_inc_crit <- skim(dataset_death_TPP_ONS_plus_inc_crit)
 
-summary_DoD_diff_plus_inc_crit_0_dereg_death <- skim(DoD_diff_plus_inc_crit_0_dereg_death)
+summary_dataset_death_TPP_ONS_plus_inc_crit_0_dereg_death <- skim(dataset_death_TPP_ONS_plus_inc_crit_0_dereg_death)
 
-write.csv(summary_DoD_diff, file = here::here("output", "DoD","summary_stats_DoD.csv"),
+write.csv(summary_dataset_death_TPP_ONS, file = here::here("output", "summary_stats","summary_stats_dataset_death_TPP_ONS.csv"),
           row.names = FALSE)
 
-write.csv(summary_DoD_diff_plus_inc_crit, file = here::here("output", "DoD","summary_DoD_diff_plus_inc_crit.csv"),
+write.csv(summary_dataset_death_TPP_ONS_plus_inc_crit, file = here::here("output", "summary_stats","summary_dataset_death_TPP_ONS_plus_inc_crit.csv"),
           row.names = FALSE)
 
-write.csv(summary_DoD_diff_plus_inc_crit_0_dereg_death, file = here::here("output", "DoD","summary_DoD_diff_plus_inc_crit_0_dereg_death.csv"),
+write.csv(summary_dataset_death_TPP_ONS_plus_inc_crit_0_dereg_death, file = here::here("output", "summary_stats","summary_dataset_death_TPP_ONS_plus_inc_crit_0_dereg_death.csv"),
           row.names = FALSE)
 
-## Cat
-table_freq <- DoD_diff %>% 
+## Categorical variables
+
+table_freq <- dataset_death_TPP_ONS %>% 
   pivot_longer(cols = c(age_band, ons_death_place:ethnicity), names_to = "subgroup", values_to = "category") %>% 
   group_by(year(min_DoD), subgroup, category) %>% 
   summarise(
     n=n()
   )
 
-table_freq_plus_inc_crit <- DoD_diff_plus_inc_crit %>% 
+table_freq_plus_inc_crit <- dataset_death_TPP_ONS_plus_inc_crit %>% 
   pivot_longer(cols = c(age_band, ons_death_place:ethnicity), names_to = "subgroup", values_to = "category") %>% 
   group_by(year(min_DoD), subgroup, category) %>% 
   summarise(
     n=n()
   )
 
-table_freq_plus_inc_crit_0_dereg_death <- DoD_diff_plus_inc_crit_0_dereg_death %>% 
+table_freq_plus_inc_crit_0_dereg_death <- dataset_death_TPP_ONS_plus_inc_crit_0_dereg_death %>% 
   pivot_longer(cols = c(age_band, ons_death_place:ethnicity), names_to = "subgroup", values_to = "category") %>% 
   group_by(year(min_DoD), subgroup, category) %>% 
   summarise(
     n=n()
   )
 
-write.csv(table_freq, file = here::here("output", "DoD","table_freq_DoD.csv"),
+write.csv(table_freq, file = here::here("output", "summary_stats","table_freq_DoD.csv"),
           row.names = FALSE)
 
-write.csv(table_freq_plus_inc_crit, file = here::here("output", "DoD","table_freq_plus_inc_crit.csv"),
+write.csv(table_freq_plus_inc_crit, file = here::here("output", "summary_stats","table_freq_plus_inc_crit.csv"),
           row.names = FALSE)
 
-write.csv(table_freq_plus_inc_crit_0_dereg_death, file = here::here("output", "DoD","table_freq_plus_inc_crit_0_dereg_death.csv"),
+write.csv(table_freq_plus_inc_crit_0_dereg_death, file = here::here("output", "summary_stats","table_freq_plus_inc_crit_0_dereg_death.csv"),
           row.names = FALSE)
 
 
-# Impossible dates of death not release
-impossible_dod_month <- DoD_diff %>% 
+# Impossible dates of death
+impossible_dod <- dataset_death_TPP_ONS %>% 
   mutate(
     ons_DoD_impossible = case_when(
       ons_death_date < date_of_birth                ~ "death_before_birth",
@@ -110,7 +111,8 @@ impossible_dod_month <- DoD_diff %>%
       is.na(TPP_death_date)                         ~ "is empty",
       TRUE                                          ~ "ok"
     ),
-    year_month_min_dod = format(min_DoD, "%Y-%m")
+    year_month_min_dod = format(min_DoD, "%Y-%m"),
+    year_min_dod = format(min_DoD, "%Y")
   ) %>% 
   pivot_longer(
     cols = c(ons_DoD_impossible, TPP_DoD_impossible),
@@ -123,7 +125,10 @@ impossible_dod_month <- DoD_diff %>%
       source == "TPP_DoD_impossible" ~ "TPP",
       TRUE                           ~ source
     )
-  ) %>% 
+  ) 
+
+# by month
+impossible_dod_month <- impossible_dod %>% 
   group_by(year_month_min_dod, source, DoD_impossible) %>% 
   summarise(
     n = n(),
@@ -132,45 +137,25 @@ impossible_dod_month <- DoD_diff %>%
 
 write.csv(
   impossible_dod_month,
-  here::here("output", "DoD", "impossible_dod_month.csv"),
+  here::here("output", "summary_stats", "impossible_dod_month.csv"),
   row.names = FALSE
 )
-# # plots
-# 
-# # Plot histogram faceted by data source
-# ## Data prep
-# DoD_diff_date_long <- DoD_diff %>%
-#   pivot_longer(
-#     cols = c(TPP_death_date, ons_death_date, min_DoD),
-#     names_to = "source",
-#     values_to = "death_date"
-#   )
 
-# ## Plot
-# DoD_histogram <- ggplot(DoD_diff_date_long, aes(x = death_date)) +
-#   geom_histogram() +  
-#   facet_wrap(~ source, scales = "free_y") +
-#   theme_minimal() +
-#   labs(title = "Death Dates by Source", x = "Date", y = "Count")
-# 
-# 
-# # Cat variables bar plots
-# ## Data prep
-# DoD_diff_cat_long <- DoD_diff %>%
-#   pivot_longer(
-#     cols = c(ons_death_place, region, rural_urban, age_band, IMD_q10, ethnicity),
-#     names_to = "variable",
-#     values_to = "category"
-#   )
-# 
-# # Bar plots subcat
-# DoD_diff_cat_bar_plot <- ggplot(DoD_diff_cat_long, aes(x = category)) +
-#   geom_bar(aes(fill=year)) +
-#   facet_wrap(~ variable, scales = "free_x") +
-#   theme_minimal() +
-#   labs(title = "Counts by subgroup", 
-#        x = "Category", y = "Count") +
-#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# by year
+impossible_dod_year <- impossible_dod %>% 
+group_by(year_min_dod, source, DoD_impossible) %>% 
+  summarise(
+    n = n(),
+    .groups = "drop"
+  )
+
+write.csv(
+  impossible_dod_year,
+  here::here("output", "summary_stats", "impossible_dod_year.csv"),
+  row.names = FALSE
+)
+  
 
 
 

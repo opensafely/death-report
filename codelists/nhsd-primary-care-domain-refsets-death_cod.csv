@@ -1,0 +1,219 @@
+code,term
+11545006,"Emergency room admission, dead on arrival"
+12141009,"Determination of outcome, death avoidable"
+13234002,Death during anesthetic induction
+1325731000000106,Died in residential home
+13603008,"Determination of outcome, death avoidable, error in technique"
+13831000000107,Cremation form Part B
+13841000000103,Cremation form Part C
+14035003,Death by hanging
+15355001,Unattended death
+15654006,Drowning in liquid other than water
+162852002,On examination - dead - unexpected
+162853007,On examination - dead - expected
+162854001,On examination - dead - unattended death
+162855000,On examination - dead - sudden death
+162857008,On examination - dead - suspicious death
+16541000000108,SD17/18 received - death clarification
+16551000000106,"SD17/18 no details, returned"
+16561000000109,Cremation form part C arranged
+16983000,Death in hospital
+17041000000103,FP22 - death
+17111000000103,Death certificate Med A
+17441000000106,Death certificate - form 11
+17766007,"Fetal death from asphyxia AND/OR anoxia, not clear if noted before OR after onset of labor"
+183676005,Died in hospital
+184084003,Registration ghost - deceased
+184274007,Hospital death discharge notification
+184275008,Death notification from hospital
+184276009,Awaiting hospital death discharge letter
+184277000,Received hospital death discharge letter
+184278005,Asked for hospital death discharge letter
+184280004,Death notification - non-hospital source
+184297005,Patient died in hospital
+184300000,Found dead at accident site
+184305005,Cause of death
+184307002,Postmortem report received
+18521000000102,Cause of death clarification status SD17/18
+18632008,"Patient status determination, deceased"
+18893004,Non-traffic vehicular accidental death
+1917008,"Patient discharge, deceased, medicolegal case"
+200155004,Death from any obstetric cause occurring more than 42 days but less than one year after delivery
+200156003,Death from sequela of direct obstetric cause
+22561000000103,"Unexpected.death, Procurator Fiscal told"
+230802007,Brainstem death
+23331000000109,SD17 form - cause of death clarification
+23341000000100,SD18 form - cause of death clarification
+23546003,Suicide while incarcerated
+237358009,Direct maternal death
+237360006,Late maternal death
+242014006,Dry drowning
+25318002,Death by strangulation
+26636000,Sudden death
+26878008,Death due to trampling
+268923008,On examination - dead
+270102001,Report for Coroner
+270103006,Coroner report - requested
+270104000,Coroner report - sent off
+270105004,Coroner report - paid for
+270107007,Coroner's postmortem report
+270108002,Coroner's postmortem report awaited
+270109005,Coroner's postmortem report requested
+270110000,Coroner's postmortem report received
+270113003,Cremation certification
+270115005,Unexpected death-Coroner told
+270116006,Postmortem report
+270607006,Police surgeon's postmortem report awaited
+270608001,Police surgeon's postmortem report requested
+270609009,Police surgeon's postmortem report received
+2711000000101,Cause of death clarification SD17/18
+274228002,Suicide by drug overdose
+274639009,"Death occurring less than 24 hours from onset of symptoms, not otherwise expected"
+274644002,"Sudden death, cause unknown"
+275656009,"Stat B,C and F cremation certs"
+27792001,Intrapartum maternal death
+28631002,Euthanasia
+287188006,Suicide using domestic gas
+287189003,Suicide using car exhaust
+287190007,Suicide by hanging
+287191006,Suicide by suffocation
+287192004,Suicide by drowning
+287193009,Suicide using firearm
+287194003,Suicide by cutting or stabbing
+287195002,Suicide by jumping from high place
+288260005,Maternal death - perinatal
+300990005,Found dead in bed
+305398007,Admission to the mortuary
+306681000000104,Underlying cause of death
+307928008,Death administrative procedure
+307930005,Death certificate
+308375000,Report for Procurator-Fiscal
+308376004,Police surgeon postmortem report
+308468002,Referral to coroner
+308646001,Death certification
+308647005,Cremation certification status
+308806009,Coroner's report status
+308808005,Postmortem report status
+308809002,Coroner's postmortem report status
+308810007,Police surgeon's postmortem report status
+310334003,Cremation certificate
+3133002,"Patient discharge, deceased, autopsy"
+31868001,Antepartum maternal death
+34468006,Sudden death of unknown cause during the puerperium
+3581000000106,"Form 89 - patient died in medical care, patients family notified"
+363049002,Death notification
+366044004,Finding of place of death
+36882002,Death due to assault AND battery
+370921009,Patient death associated with a fall while being cared for in a healthcare facility
+371000000100,SD17/18 completed
+371828006,Patient deceased during stay (discharge status = dead)
+373866000,Death due to chemotherapy toxicity
+373867009,Death due to radiotherapy toxicity
+37522003,"Determination of outcome, death unavoidable"
+381000000103,Cremation form part B completed
+38605008,Natural death
+391000000101,Cremation form part C completed
+39399006,Natural death with probable cause suspected
+397709008,Patient died
+398226000,Perioperative death
+399753006,Date of death
+401321000,Hospital notified of death
+405535005,Adverse incident resulting in death
+40947009,Drowning
+415169009,Preoperative anesthetic death
+41819004,"Patient discharge, deceased, donation of body"
+418309003,Suspicious death
+418362005,Dead - sudden death
+418646009,Dead - expected
+419099009,Dead
+419393000,Dead - suspicious death
+419620001,Death
+419697005,Dead - unexpected
+419973004,Found dead
+423409001,Eastern Cooperative Oncology Group performance status - grade 5
+426999008,Cardiopulmonary resuscitation discontinued due to signs of death
+428413005,Death verification
+441760003,Unattended death of unknown cause
+44301001,Suicide
+44633000,Accidental death in public place
+45216005,Iatrogenic death
+49380000,Anesthetic death
+49713007,Unexpected death
+50105002,"Undetermined manner of death, natural causes suspected"
+50109008,Drowning in fresh water
+50181009,"Determination of outcome, death avoidable, chart audit required"
+50514002,Instantaneous death
+5062002,Death by immolation
+51709005,Assisted suicide
+52136000,Intraoperative death
+5331006,Postoperative death
+53559009,Death in less than 24 hours from onset of symptoms
+5866003,Postpartum maternal death
+59283008,Maternal death
+62691006,"Determination of outcome, death avoidable, error in judgement"
+63238001,Dead on arrival at hospital
+6476001,Death by electrocution
+65037004,"Death, manner undetermined"
+65819004,Accidental death in home
+66360006,Natural death with proved cause
+66411002,"Undetermined manner of death, homicide suspected"
+67786008,Death by fire
+68023007,"Undetermined manner of death, suicide suspected"
+698714004,Indirect maternal death
+698715003,Death from sequela of indirect maternal cause
+70055007,Unexpected sudden death of adult
+702710003,Dead - death without witness
+711157000,Sudden infant death with dysgenesis of testes syndrome
+713049009,Died in community hospital
+713050009,Died in learning disability unit
+713051008,Died in mental health unit
+713461000000100,Death administration
+714342001,Died in ambulance
+719425009,Sudden unexpected death in epilepsy
+720529005,Death from indirect obstetric cause occurring more than 42 days but less than one year after delivery
+720534009,Death from direct obstetric cause occurring more than 42 days but less than one year after delivery
+725951000000101,GP22 deregistration - death
+735686002,Sudden cardiac death due to cardiac arrhythmia
+740603007,Killed
+74148000,Death unattended by physician
+7420003,Drowning in brackish water
+74332007,Death by asphyxiation
+74376000,Drowning in salt water
+74660000,Accidental death in industrial place
+75004002,"Emergency room admission, died in emergency room"
+766231000000101,Cremation form 4 completed
+766291000000100,Cremation form 5 completed
+77105004,Garrotment
+78070009,Suicide by multiple means
+7878000,Accidental death
+78857004,Natural death with proved cause without autopsy
+794191000000103,Verification of expected death
+79779006,"Patient discharge, deceased, no autopsy"
+79867001,Traffic vehicular accidental death
+812481000000104,Dead on arrival in accident and emergency department
+812491000000102,Died in accident and emergency department
+81840004,Natural death reportable to medicolegal authority
+818961000000101,Patient died in residential institution
+818971000000108,Patient died in public place
+82621005,Natural death with proved cause by autopsy
+863541000000104,Sudden unexpected death in childhood rapid response team call out
+87281005,Death from overwork
+87309006,Death of unknown cause
+876879006,Died at home
+876880009,Died in care home
+876881008,Died in general practice premises
+876882001,Died in hospice
+876883006,Died during operation
+876884000,Died in nursing home
+876885004,Died in street
+876886003,Died in usual place of residence
+891003,Suicide by self-administered drug
+89334003,"Patient discharge, deceased, to anatomic board"
+89816009,Died without sign of disease
+90049009,Unexplained sudden death
+929151000000109,Patient died in Part III accommodation
+929161000000107,Patient died in Part IV accommodation
+931421000000107,Patient died in hospice community lodge
+95281009,Sudden cardiac death
+9855000,Natural death with unknown cause
+9857008,"Determination of outcome, death avoidable, error in diagnosis"
