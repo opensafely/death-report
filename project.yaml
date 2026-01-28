@@ -24,10 +24,18 @@ actions:
       moderately_sensitive:
         csv: output/report/reg_dereg_ONS_TPP/*.csv
 
+  Dataset_source_dod_diff_processed:
+    run: r:v2 analysis/3_dataset_DoD_TPP_ONS_with_grace_period.R
+      --output output/highly_sensitive/DoD_TPP_ONS_with_grace_period.csv
+    needs: [dataset_death_TPP_ONS]
+    outputs:
+      highly_sensitive:
+        csv: output/highly_sensitive/DoD_TPP_ONS_with_grace_period.csv
+
   death_source:
     run: r:v2 analysis/4_source_prop.R
       --output output/report/by_source/*.csv 
-    needs: [dataset_death_TPP_ONS]
+    needs: [Dataset_source_dod_diff_processed]
     outputs:
       moderately_sensitive:
         csv: output/report/by_source/*.csv
@@ -35,7 +43,7 @@ actions:
   DoD_difference:
     run: r:v2 analysis/5_DoD_diff.R
       --output output/report/DoD_diff/*.csv 
-    needs: [dataset_death_TPP_ONS]
+    needs: [Dataset_source_dod_diff_processed]
     outputs:
       moderately_sensitive:
         csv: output/report/DoD_diff/*.csv
