@@ -134,7 +134,22 @@ write.csv(ons_death_dereg_group, here::here("output", "report", "reg_dereg_ONS_T
 
 # Tables 2. Relation between TPP and registration data ------------------------------
 
-# a- NO
+# a- TPP deaths distribution across time and inclusion criteria
+
+TPP_reg_ons_year <- death_TPP_ONS_reg_dereg %>%
+  filter(!is.na(TPP_death_date)) %>%
+  group_by(TPP_death_year = year(TPP_death_date)) %>%
+  summarise(
+    any_tpp_death = rounding(n()), # any TPP death
+    tpp_death_regis = rounding(sum(has_registration == TRUE, na.rm = TRUE)), # TPP + last registration before death
+    tpp_regis_and_during_study = rounding(sum(tpp_death_during_study == TRUE & has_registration == TRUE, na.rm = TRUE)),
+    any_tpp_ons = rounding(sum(!is.na(ons_death_date), na.rm = TRUE)), # any TPP death + any ONS death
+    ons_tpp_regis_and_during_study = rounding(sum(tpp_death_during_study == TRUE & has_registration == TRUE, na.rm = TRUE)), # TPP + ONS + last dereg date after death
+    .groups = "drop"
+  )
+
+write.csv(TPP_reg_ons_year, here::here("output", "report", "reg_dereg_ONS_TPP", "TPP_reg_ons_year.csv"))
+
 
 # b- Difference date of death - last registration date
 TPP_death_reg_group<- death_TPP_ONS_reg_dereg %>%
