@@ -1,0 +1,575 @@
+---
+title: "Tables_visualozations"
+author: "Martina Pesce"
+date: "2026-02-02"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+# Import libraries
+library(tidyverse)
+library(lubridate)
+library(glue)
+library(here)
+library(patchwork)
+library(scales)
+```
+
+
+```{r}
+#Import data
+
+# reg / dereg ----
+
+# ONS
+ons_reg_tpp_year <- read_csv("output/report/reg_dereg_ONS_TPP/ONS_reg_tpp_year.csv")
+ONS_death_dereg_group <- read_csv("output/report/reg_dereg_ONS_TPP/ONS_death_dereg_group.csv")
+ONS_death_reg_group <- read_csv("output/report/reg_dereg_ONS_TPP/ONS_death_reg_group.csv")
+
+
+# TPP
+TPP_reg_ons_year <- read_csv("output/report/reg_dereg_ONS_TPP/TPP_reg_ons_year.csv")
+TPP_death_dereg_group <- read_csv("output/report/reg_dereg_ONS_TPP/TPP_death_dereg_group.csv")
+TPP_death_reg_group <- read_csv("output/report/reg_dereg_ONS_TPP/TPP_death_reg_group.csv")
+
+
+#Death by source ----
+
+# source without grace period
+collate_death_source_without_grace_period <- read_csv("output/report/by_source/collate_death_source_without_grace_period.csv")
+
+# source with grace period dereg + 30
+collate_death_source_with_grace_period <- read_csv("output/report/by_source/collate_death_source_with_grace_period.csv")
+
+# source special period with grace period
+collate_death_source_grace_per_spec_period <- read_csv("output/report/by_source/collate_death_source_grace_per_spec_periods.csv")
+
+# TPP coding -----
+TPP_coding_date_year <- read_csv("output/report/by_source/TPP_coding_date_year.csv")
+
+ons_tpp_date_code_year <- read_csv("output/report/by_source/ons_tpp_date_code_year.csv")
+
+# source by practice
+practice_qt <- read_csv("output/report/source_by_practice/df_quantiles.csv")
+
+pract_deaths_population <- read_csv("output/report/source_by_practice/pract_deaths_population.csv")
+
+
+# Difference date of death -------
+collate_DoD_diff_with_grace_period_table <- read_csv("output/report/DoD_diff/collate_DoD_diff_with_grace_period_table.csv")
+
+
+# Create output directory
+output_dir <- here("output", "final_visualization")
+fs::dir_create(output_dir)
+```
+
+
+```{r}
+# Data overall
+# number ons death / registered in the period
+ons_reg_tpp_year %>%
+  filter(ons_death_year %in% 2020:2024) %>%
+  summarise(across(3:7, sum, na.rm = TRUE))
+
+# number tpp death / registered in the period 2020 - 2024
+TPP_reg_ons_year %>%
+  filter(TPP_death_year %in% 2020:2024) %>%
+  summarise(across(3:7, sum, na.rm = TRUE))
+
+TPP_reg_ons_year %>%
+  filter(TPP_death_year %in% 2009:2024) %>%
+  summarise(across(3:7, sum, na.rm = TRUE))
+```
+
+```{r}
+# Fact of death by source
+
+#-----------------------------------------------------------------------------------------
+# Figure 1. A: Deaths over time by source
+table_by_source_with_gp <- collate_death_source_with_grace_period %>% 
+  filter(group_var == "general population" & year_pref_ONS < 2025) %>%
+  group_by(year_pref_ONS) %>%
+  summarise(
+    `TPP-pcEHR` = sum(count[ONS_or_TPP %in% c("TPP", "ONS & TPP")]),
+    ONS = sum(count[ONS_or_TPP %in% c("ONS", "ONS & TPP")]),
+    `ONS or TPP-pcEHR` = sum(count[ONS_or_TPP %in% c("TPP", "ONS & TPP", "ONS")])
+  ) %>%
+  pivot_longer(cols = c("TPP-pcEHR", "ONS", "ONS or TPP-pcEHR"),
+               names_to = "source",
+               values_to = "deaths") %>%
+  group_by(source) %>%
+  arrange(year_pref_ONS) %>%
+  filter(cumsum(deaths != 0) > 0) 
+
+# Plot
+all_years <- sort(unique(table_by_source_with_gp$year_pref_ONS))
+year_labels <- ifelse(all_years %in% c(2019, 2025), paste0(all_years, "*"), as.character(all_years))
+
+F1a_general_death_source_total <- ggplot(table_by_source_with_gp, aes(x = year_pref_ONS, y = deaths, color = source)) +
+  geom_line(size = 1) +
+  geom_point() +
+  labs(
+    title = "(a)",
+    x = "Year",
+    y = "Number of deaths",
+    color = "Source"
+  ) + scale_y_continuous(
+    limits = c(0, NA) )+
+  scale_color_manual(values = c(
+    "TPP-pcEHR" = "#56B4E9",
+    "ONS" = "#E69F00",
+    "ONS or TPP-pcEHR" = "black"
+  )) +
+  scale_x_continuous(
+    breaks = all_years,
+    labels = year_labels 
+  ) +
+  theme_minimal()+
+  theme(
+    legend.position = "bottom"
+  )
+
+
+#Figure 1. B: Death over time by source percentages 
+
+#Prepare data
+table_by_source_pct <- collate_death_source_with_grace_period %>% 
+  filter(group_var == "general population"  & year_pref_ONS < 2025) %>%
+  group_by(year_pref_ONS) %>%
+  mutate(percentage = count / sum(count) * 100)
+
+table_by_source_pct$ONS_or_TPP <- factor(
+  table_by_source_pct$ONS_or_TPP,
+  levels = c("TPP", "ONS", "ONS & TPP"),
+  labels = c("TPP-pcEHR", "ONS", "ONS & TPP-pcEHR")  
+)
+
+# Plot
+all_years <- sort(unique(table_by_source_pct$year_pref_ONS))
+year_labels <- ifelse(all_years == 2019, "2019*", as.character(all_years))
+
+F1b_general_death_source_perc <- ggplot(table_by_source_pct, aes(x = year_pref_ONS, y = percentage, fill = ONS_or_TPP)) +
+  geom_col() +
+  geom_hline(yintercept = 99, linetype = "dashed", color = "black") +
+  geom_hline(yintercept = 90, linetype = "dashed", color = "black") +
+  annotate("text", x = max(table_by_source_pct$year_pref_ONS) + 0.4, y = 92, label = "90%", hjust = 0, size = 3) +
+  annotate("text", x = max(table_by_source_pct$year_pref_ONS) + 0.4, y = 102, label = "99%", hjust = 0, size = 3) +
+  labs(
+    title = "(b)",
+    x = "Year",
+    y = "Percentage of deaths",
+    fill = "Source"
+  ) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1))  +
+  scale_x_continuous(
+    breaks = all_years,
+    labels = year_labels  # Add space to the right for text
+  ) +
+  scale_fill_manual(
+    values = c(
+      "TPP-pcEHR" = "#56B4E9",
+      "ONS" = "#E69F00",
+      "ONS & TPP-pcEHR" = "#009E73"
+    )
+  ) +
+  theme_minimal()+
+  theme(
+    legend.position = "bottom"
+  )
+
+#Overal figure
+plot_death_by_source <- F1a_general_death_source_total  / F1b_general_death_source_perc
+plot_death_by_source
+
+
+# tables for text
+table_by_source_with_gp_sum <- table_by_source_pct %>%
+  group_by(ONS_or_TPP) %>%
+  summarise(
+    total_count = sum(count, na.rm = TRUE),
+    .groups = "drop"
+  )
+perc_source_grace_per_spec_period <- collate_death_source_grace_per_spec_period %>%
+  group_by(period, ONS_or_TPP) %>%
+  summarise(
+    n = sum(count, na.rm = TRUE),
+    .groups = "drop_last"
+  ) %>%
+  mutate(
+    per_sum = sum(n),
+    perc = n / sum(n) * 100
+  ) %>%
+  ungroup()
+```
+
+```{r}
+# plot 2025
+
+#Figure 1. B: Death over time by source percentages 
+
+#Prepare data
+table_by_source_pct_2025 <- collate_death_source_grace_per_spec_period %>% 
+  filter(group_var == "general population"  & str_detect(period, "2025")) %>%
+  group_by(period) %>%
+  mutate(percentage = count / sum(count) * 100,
+         year_count = sum(count),
+       #  period = ym(period)
+         ) %>% 
+  mutate( 
+    perc_table = paste0(round(percentage, 1), "% (", count, "/", year_count, ")")
+    )
+
+table_by_source_pct_2025$ONS_or_TPP <- factor(
+  table_by_source_pct_2025$ONS_or_TPP,
+  levels = c("TPP", "ONS", "ONS & TPP"),
+  labels = c("TPP-pcEHR", "ONS", "ONS & TPP-pcEHR")  
+)
+
+# Table 2
+table_by_source_pct_2025_paper <- table_by_source_pct_2025 %>% 
+  select(period, ONS_or_TPP, perc_table) %>% 
+  pivot_wider(
+    names_from = ONS_or_TPP,
+    values_from = perc_table
+  )
+
+F1b_general_death_source_perc_2025 <- ggplot(table_by_source_pct_2025, aes(x = period, y = percentage, fill = ONS_or_TPP)) +
+  geom_col(position = position_dodge()) +
+#  geom_hline(yintercept = 99, linetype = "dashed", color = "black") +
+  geom_hline(yintercept = 90, linetype = "dashed", color = "black") +
+  annotate("text", x = max(table_by_source_pct_2025$period) + 0.4, y = 92, label = "90%", hjust = 0, size = 3) +
+  annotate("text", x = max(table_by_source_pct_2025$period) + 0.4, y = 102, label = "99%", hjust = 0, size = 3) +
+  labs(
+    title = "(b)",
+    x = "Year",
+    y = "Percentage of deaths",
+    fill = "Source"
+  ) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1))  +
+  scale_x_continuous(
+    breaks = all_years,
+    labels = year_labels  # Add space to the right for text
+  ) +
+  scale_fill_manual(
+    values = c(
+      "TPP-pcEHR" = "#56B4E9",
+      "ONS" = "#E69F00",
+      "ONS & TPP-pcEHR" = "#009E73"
+    )
+  ) +
+  theme_minimal()+
+  theme(
+    legend.position = "bottom"
+  )
+
+
+```
+
+
+
+```{r}
+# SystemOne date vs code
+
+ons_tpp_date_code_2020_2024 <- ons_tpp_date_code_year %>%  
+  filter(year_pref_ONS_TPP_plus_codes %in% 2020:2024) %>%
+  group_by(TPP_date_or_coded, ONS_death) %>%
+  summarise(
+    n = sum(n, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    perc = n / sum(n) * 100
+  )
+
+tpp_date_code_2020_2024 <- ons_tpp_date_code_year %>%  
+  filter(year_pref_ONS_TPP_plus_codes %in% 2020:2024) %>%
+  group_by(TPP_date_or_coded, ONS_death) %>%
+  summarise(
+    n = sum(n, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    perc = n / sum(n) * 100
+  )
+
+
+ons_or_tpp_date_code_2020_2024 <- ons_tpp_date_code_year %>%  
+  filter(year_pref_ONS_TPP_plus_codes %in% 2020:2024) %>%  
+  mutate(
+    TPP_any = if_else(
+      TPP_date_or_coded == "TPP - neither dated nor coded",
+      "No TPP",
+      "Yes TPP"
+    )
+  ) %>%
+  group_by(TPP_any, ONS_death) %>%
+  summarise(
+    n = sum(n, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    perc = n / sum(n) * 100
+  )
+```
+
+```{r}
+# grace period
+
+# TODO: table needs to be re-done
+
+```
+
+
+```{r}
+# Plot by group ---------------------------------------------------------------------
+
+# 3.A table % TPP of total per subgroup-year
+
+# table % TPP of total per subgroup-year
+tpp_share_by_year <- collate_death_source_with_grace_period %>%
+  filter(year_pref_ONS > 2019 & year_pref_ONS < 2025) %>%
+  group_by(group_var, group_value, year_pref_ONS) %>%
+  summarise(
+    tpp   = sum(count[ONS_or_TPP %in% c("TPP", "ONS & TPP")], na.rm = TRUE),
+    total = sum(count[ONS_or_TPP %in% c("TPP", "ONS & TPP", "ONS")], na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  group_by(group_var, group_value) %>%
+  arrange(year_pref_ONS, .by_group = TRUE) %>%
+  mutate(started = cumsum(replace_na(total, 0) > 0) > 0) %>%
+  filter(started) %>%
+  mutate(pct_tpp = if_else(total > 0, tpp / total, NA_real_)) %>%
+  ungroup()
+
+#Plot function by gorup
+
+subgroup_perc_plot <- function(var_name, data) {
+  
+  df <- data %>% filter(group_var == var_name)
+  
+  all_years   <- sort(unique(df$year_pref_ONS))
+  year_labels <- as.character(all_years)
+  
+  temp_plot<- ggplot(df, aes(x = year_pref_ONS, y = pct_tpp, group = group_value, color = group_value)) +
+    geom_line(linetype = "dashed") +
+    geom_point(size = 2) +
+    scale_y_continuous(labels = percent_format(accuracy = 1)) +
+    scale_x_continuous(breaks = all_years, labels = year_labels) +
+    coord_cartesian(ylim = c(0.75, 1), clip = "off") +
+    labs(
+      title = paste0("Share of TPP deaths among total deaths — ", var_name),
+      x = "Year (ONS-preferred)",
+      y = "% TPP of total",
+      color = var_name
+    ) +
+    theme_minimal() +
+    theme(
+      panel.background = element_rect(fill = "white", color = NA),
+      plot.background  = element_rect(fill = "white", color = NA),
+      axis.text.x.top = element_text(hjust = 0),
+      axis.text.x.bottom = element_text(hjust = 0),
+      strip.text.y.left = element_text(angle = 0, hjust = 1),
+      strip.placement = "outside",
+      axis.ticks.x = element_line(),
+      legend.position = "bottom"
+    ) 
+  
+  print(temp_plot)
+  # ggsave(fs::path(output_dir, glue("subgroup_perc_plot_{var_name}.png")), plot = temp_plot, width = 11, height = 4)
+}
+
+subgroup_perc_plot("general population", tpp_share_by_year)
+subgroup_perc_plot("age_band", tpp_share_by_year)
+subgroup_perc_plot("ethnicity", tpp_share_by_year)
+subgroup_perc_plot("general population", tpp_share_by_year)
+subgroup_perc_plot("IMD_q10", tpp_share_by_year)
+subgroup_perc_plot("ons_death_place", tpp_share_by_year)
+subgroup_perc_plot("region", tpp_share_by_year)
+subgroup_perc_plot("rural_urban", tpp_share_by_year)
+subgroup_perc_plot("sex", tpp_share_by_year)
+
+# table text
+
+tpp_share_2024 <- tpp_share_by_year %>%
+  filter(year_pref_ONS == 2024) 
+
+
+subgroup_source_share_by_year <- collate_death_source_with_grace_period %>%
+  filter(year_pref_ONS == 2024) %>%
+  group_by(group_var, group_value, year_pref_ONS) %>%
+  summarise(
+    tpp   = sum(count[ONS_or_TPP %in% c("TPP", "ONS & TPP")], na.rm = TRUE),
+    total = sum(count[ONS_or_TPP %in% c("TPP", "ONS & TPP", "ONS")], na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  group_by(group_var, group_value) %>%
+  arrange(year_pref_ONS, .by_group = TRUE)
+```
+
+```{r}
+# Figure 2: death day difference-----------------------------------------------
+# Prepare data
+#
+table_DoD_general <- collate_DoD_diff_with_grace_period_table %>% 
+  filter(group_var == "general population" & year_pref_ONS <2025 & year_pref_ONS >2019) %>% 
+  mutate(
+    proportion = count_by_group_DoD / GP_ONS_annual_deaths*100
+  )
+
+table_DoD_general$DoD_groups <- factor(
+  table_DoD_general$DoD_groups,
+  levels = c(
+    "-32+",
+    "-8 to -31",
+    "-1 to -7",
+    "0",
+    "1-7",
+    "8-31",
+    "32+"
+  )
+)
+
+# # barplot
+
+ggplot(table_DoD_general, aes(x = DoD_groups, y = proportion, fill = DoD_groups)) +
+  geom_bar(stat = "identity") +
+  geom_text(data = subset(table_DoD_general, DoD_groups == "0"),
+            aes(label = round(proportion, 2)),
+            vjust = -0.3, size = 3) +
+  scale_fill_manual(values = c(
+    "-1 to -7" = "#56B4E9", "-8 to -31" = "#56B4E9", "-32 to -365" = "#56B4E9", "-366+" = "#56B4E9",
+    "0" = "#009E73",
+    "1-7" = "#E69F00", "8-31" = "#E69F00", "32-365" = "#E69F00", "366+" = "#E69F00"
+  )) +
+  facet_wrap(~ year_pref_ONS, scales = "free_y") +
+  labs(x = "DoD group", y = "Proportion", title = "Proportion by DoD group and Year") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+# option 2:
+
+plot_same_DoD <- table_DoD_general %>%
+  filter(DoD_groups == "0" & year_pref_ONS < 2025) %>%
+  ggplot(aes(x = year_pref_ONS, y = proportion)) +  # ← numeric x
+  geom_bar(stat = "identity", fill = "#009E73", width = 0.3) +
+#  geom_hline(yintercept = 95, linetype = "dashed") +
+  annotate("text", x = 2024.2, y = 98, label = "95%", hjust = 0, size = 3) +
+  geom_text(aes(label = round(proportion, 2)), vjust = -0.3, size = 3) +
+  labs(x = "Year", y = "Percentage", title = "(a)") +
+  theme_minimal()
+
+plot_other_DoD <- table_DoD_general %>%
+  filter(DoD_groups != "0" & year_pref_ONS < 2025) %>%
+  ggplot(aes(x = DoD_groups, y = proportion, fill = DoD_groups)) +
+  geom_bar(stat = "identity") +
+  geom_vline(xintercept = 3.5, linetype = "dashed") +  # separates negative from positive
+  geom_text(data = subset(table_DoD_general, DoD_groups == "-1 to -7" & year_pref_ONS < 2025),
+            aes(label = round(proportion, 2)),
+            vjust = -0.3, size = 3) +
+  geom_text(data = subset(table_DoD_general, DoD_groups == "1-7" & year_pref_ONS < 2025),
+            aes(label = round(proportion, 2)),
+            vjust = -0.3, size = 3) +
+  scale_fill_manual(values = c(
+    "-1 to -7" = "#56B4E9", "-8 to -31" = "#56B4E9", "-32+" = "#56B4E9",
+    "1-7" = "#E69F00", "8-31" = "#E69F00", "32+" = "#E69F00"
+  )) +
+  facet_wrap(~ year_pref_ONS, nrow =1) +
+  labs(x = "Difference in date of death between sources (days)", y = "Percentage", title = '(b)') +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1), legend.position='none'
+  )+
+  scale_y_continuous(limits = c(0, 5))
+  
+plot_DoD_general <-plot_same_DoD / plot_other_DoD + plot_layout(heights = c(2, 1))
+
+plot_DoD_general
+
+write.csv(table_DoD_general, fs::path(output_dir, glue("table_DoD_general.csv")))
+ggsave(fs::path(output_dir, glue("plot_DoD_general.png")), plot = plot_DoD_general,
+       width = 7, height = 5, dpi = 300)
+
+```
+
+```{r}
+# 4.A % same day by subgroup
+
+# 1) Build % same-day dataset (2020+ to match earlier filtering)
+same_day_share_by_year <- collate_DoD_diff_with_grace_period_table %>%
+  filter(DoD_groups == "0", year_pref_ONS > 2019) %>% 
+  mutate(
+    proportion = count_by_group_DoD / GP_ONS_annual_deaths
+  ) 
+
+# 2) Plotting function
+subgroup_same_DoD_plot <- function(var_name, data) {
+  
+  df <- data %>% filter(group_var == var_name)
+  
+  all_years   <- sort(unique(df$year_pref_ONS))
+  year_labels <- as.character(all_years)
+  
+  temp_plot <- ggplot(df, aes(x = year_pref_ONS, y = proportion, group = group_value, color = group_value)) +
+    geom_line(linetype = "dashed") +
+    geom_point(size = 2) +
+    scale_y_continuous(labels = percent_format(accuracy = 0.1)) +
+    coord_cartesian(ylim = c(0.9, 1), clip = "off") +
+    labs(
+      title = paste0("Same-day date in ONS and TPP — ", var_name),
+      x = "Year (ONS-preferred)",
+      y = "% with same day",
+      color = var_name
+    ) +
+    theme_minimal() +
+    theme(
+      panel.background = element_rect(fill = "white", color = NA),
+      plot.background  = element_rect(fill = "white", color = NA),
+      axis.text.x.top = element_text(hjust = 0),
+      axis.text.x.bottom = element_text(hjust = 0),
+      strip.text.y.left = element_text(angle = 0, hjust = 1),
+      strip.placement = "outside",
+      axis.ticks.x = element_line(),
+      legend.position = "bottom"
+    ) 
+  
+  print(temp_plot)
+  # ggsave(fs::path(output_dir, glue("subgroup_same_DoD_plot_{var_name}.png")), plot = temp_plot, width = 11, height = 4)
+}
+
+
+#plots by group
+subgroup_same_DoD_plot("general population",same_day_share_by_year)
+subgroup_same_DoD_plot("age_band",same_day_share_by_year)
+subgroup_same_DoD_plot("ethnicity",same_day_share_by_year)
+subgroup_same_DoD_plot("IMD_q10",same_day_share_by_year)
+subgroup_same_DoD_plot("ons_death_place",same_day_share_by_year)
+subgroup_same_DoD_plot("region",same_day_share_by_year)
+subgroup_same_DoD_plot("rural_urban",same_day_share_by_year)
+subgroup_same_DoD_plot("sex",same_day_share_by_year)
+
+
+
+
+#tables numbers text
+DoD_overall_prop <- table_DoD_general %>%
+  filter(year_pref_ONS > 2019 & year_pref_ONS < 2025) %>% 
+  group_by(DoD_groups) %>%
+  summarise(
+    n = sum(count_by_group_DoD, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    prop = n / sum(n)*100,
+    overall_tot = sum(n)
+  )
+```
+
