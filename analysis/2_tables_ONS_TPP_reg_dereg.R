@@ -144,7 +144,7 @@ TPP_reg_ons_year <- death_TPP_ONS_reg_dereg %>%
     tpp_death_regis = rounding(sum(has_registration == TRUE, na.rm = TRUE)), # TPP + last registration before death
     tpp_regis_and_during_study = rounding(sum(tpp_death_during_study == TRUE & has_registration == TRUE, na.rm = TRUE)),
     any_tpp_ons = rounding(sum(!is.na(ons_death_date), na.rm = TRUE)), # any TPP death + any ONS death
-    ons_tpp_regis_and_during_study = rounding(sum(tpp_death_during_study == TRUE & has_registration == TRUE, na.rm = TRUE)), # TPP + ONS + last dereg date after death
+    ons_tpp_regis_and_during_study = rounding(sum(ons_death_during_study == TRUE & has_registration == TRUE, na.rm = TRUE)), # TPP + ONS + last dereg date after death
     .groups = "drop"
   )
 

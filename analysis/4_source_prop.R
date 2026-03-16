@@ -25,8 +25,8 @@ DoD_TPP_ONS_with_grace_period <- read_csv("output/highly_sensitive/DoD_TPP_ONS_w
 # 1- ONS / TPP distribution without grace period --------------------------------------------
 DoD_TPP_ONS_without_grace_period <- DoD_TPP_ONS_with_grace_period %>%
   mutate(
-    ons_without_grace_period = !is.na(ONS_death) & death_dereg_diff_ONS > 0,
-    tpp_without_grace_period = !is.na(TPP_death) & death_dereg_diff_TPP > 0
+    ons_without_grace_period = !is.na(ONS_death) & death_dereg_diff_ONS >= 0,
+    tpp_without_grace_period = !is.na(TPP_death) & death_dereg_diff_TPP >= 0
   ) %>% 
     mutate(
     ONS_or_TPP_without_grace_period = case_when(
