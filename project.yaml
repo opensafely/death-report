@@ -44,7 +44,7 @@ actions:
         table_death_source: output/analysis_tables/table_death_source.csv
         table_death_source_25_26: output/analysis_tables/table_death_source_25_26.csv
         tpp_death_code_or_date: output/analysis_tables/tpp_death_code_or_date.csv
-        table_death_source_overall_any_tpp: output/analysis_tables/table_death_source_any_tpp.csv
+        table_death_source_overall_any_tpp: output/analysis_tables/table_death_source_overall_any_tpp.csv
 
   report_sources_date_agreement:
     run: r:v2 analysis/5_sources_date_agreement.R 
