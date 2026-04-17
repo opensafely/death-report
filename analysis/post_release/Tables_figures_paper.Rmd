@@ -1,0 +1,675 @@
+---
+title: "Tables and figures death manuscript"
+author: "Martina Pesce"
+date: "2026-02-02"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+# Import libraries
+library(tidyverse)
+library(lubridate)
+library(glue)
+library(here)
+library(patchwork)
+library(scales)
+
+# Create output directory
+output_dir <- here("output", "final_visualization")
+fs::dir_create(output_dir)
+```
+
+
+```{r}
+# =====================================================
+# Import analysis tables
+# =====================================================
+
+# Context
+table_source_raw <- read_csv(
+  here("output", "analysis_tables", "table_source_raw.csv")
+)
+
+# Implausible death dates
+death_implausible_source <- read_csv(
+  here("output", "analysis_tables", "death_implausible_source.csv")
+)
+
+# Registration and deregistration around death
+registration_status_source <- read_csv(
+  here("output", "analysis_tables", "registration_status_source.csv")
+)
+
+reg_start_timing_source <- read_csv(
+  here("output", "analysis_tables", "reg_start_timing_source.csv")
+)
+
+reg_end_timing_source <- read_csv(
+  here("output", "analysis_tables", "reg_end_timing_source.csv")
+)
+
+# Death source comparison
+table_death_source <- read_csv(
+  here("output", "analysis_tables", "table_death_source.csv")
+)
+
+table_death_source_25_26 <- read_csv(
+  here("output", "analysis_tables", "table_death_source_25_26.csv")
+)
+
+tpp_death_code_or_date <- read_csv(
+  here("output", "analysis_tables", "tpp_death_code_or_date.csv")
+)
+
+table_death_source_overall_any_tpp <- read_csv(
+  here("output", "analysis_tables", "table_death_source_overall_any_tpp.csv")
+)
+
+table_practice_percentiles <- read_csv(
+  here("output", "analysis_tables", "table_practice_percentiles.csv")
+)
+
+# Date agreement between ONS and TPP-pcEHR
+table_ons_tpp_dates_diff <- read_csv(
+  here("output", "analysis_tables", "table_ons_tpp_dates_diff.csv")
+)
+
+```
+
+
+```{r}
+# =====================================================
+# Overall summary numbers
+# =====================================================
+
+# Any dated deaths in the dataset, 2009-2025
+pcEHR_2009_2025 <- table_death_source |>
+  filter(
+    death_date_ref_year >= 2009,
+    death_date_ref_year <= 2025
+  ) |>
+  summarise(
+    pcEHR_total = sum(total, na.rm = TRUE),
+    mean_pcEHR_per_year = pcEHR_total / 17
+  )
+
+# Deaths with an ONS date of death, 2020-2025
+pcEHR_2020_2025 <- table_death_source |>
+  filter(
+    death_date_ref_year >= 2020,
+    death_date_ref_year <= 2025
+  ) |>
+  summarise(
+    ons_total = sum(total[death_source %in% c("ONS_only", "Both")], na.rm = TRUE),
+    both_total = sum(total[death_source == "Both"], na.rm = TRUE),
+    tpp_only_total = sum(total[death_source == "TPP_only"], na.rm = TRUE),
+    n_years = n_distinct(death_date_ref_year),
+    ons_mean = ons_total / n_years,
+    both_perc = both_total / ons_total * 100
+  )
+
+pcEHR_2009_2025
+pcEHR_2020_2025
+
+```
+
+
+```{r}
+# =====================================================
+# Table-ready summaries for 2025
+# =====================================================
+
+# Registration status at death
+tbl_1_2025_reg_status_by_source <- registration_status_source |>
+  filter(death_date_ref_year == 2025) |>
+  pivot_wider(
+    names_from = death_source,
+    values_from = total
+  ) |>
+  mutate(
+    any = rowSums(across(c(ONS_only, TPP_only, Both)), na.rm = TRUE),
+    ONS_all = rowSums(across(c(ONS_only, Both)), na.rm = TRUE),
+    TPP_all = rowSums(across(c(TPP_only, Both)), na.rm = TRUE)
+  )
+
+# Time from death to deregistration
+tbl_2_2025_time_to_dereg_by_source <- reg_end_timing_source |>
+  filter(death_date_ref_year == 2025) |>
+  pivot_wider(
+    names_from = death_source,
+    values_from = total
+  ) |>
+  mutate(
+    any = rowSums(across(c(ONS_only, TPP_only, Both)), na.rm = TRUE),
+    ONS_all = rowSums(across(c(ONS_only, Both)), na.rm = TRUE),
+    TPP_all = rowSums(across(c(TPP_only, Both)), na.rm = TRUE)
+  )
+```
+
+
+
+
+```{r}
+# =====================================================
+# Figure 1: source of death over time
+# =====================================================
+
+fig_1_data <- table_death_source |>
+  filter(
+    subgroup == "overall",
+    subgroup_value == "All",
+    death_date_ref_year < 2026
+  )
+
+theme_fig_1 <- theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "bottom"
+  )
+
+# Panel A: deaths recorded in both sources vs single source
+fig_1_all_stacked <- fig_1_data |>
+  mutate(
+    concordance = case_when(
+      death_source == "Both" ~ "ONS & TPP-pcEHR",
+      death_source %in% c("ONS_only", "TPP_only") ~ "Single source"
+    ),
+    concordance = factor(
+      concordance,
+      levels = c("ONS & TPP-pcEHR", "Single source")
+    )
+  ) |>
+  group_by(death_date_ref_year, concordance) |>
+  summarise(
+    total = sum(total, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+p_fig_1_all <- ggplot(
+  fig_1_all_stacked,
+  aes(x = death_date_ref_year, y = total, fill = concordance)
+) +
+  geom_col(
+    position = position_stack(reverse = TRUE),
+    color = "white",
+    linewidth = 0.2
+  ) +
+  geom_vline(
+    xintercept = 2018.5,
+    linetype = "dotted",
+    linewidth = 0.8
+  ) +
+  scale_fill_manual(
+    values = c(
+      "ONS & TPP-pcEHR" = "#785EF0",
+      "Single source" = "#BBBBBB"
+    ),
+    name = NULL
+  ) +
+  labs(
+    x = "Year of death",
+    y = "Number of deaths",
+    title = "(A)"
+  ) +
+  theme_fig_1
+
+# Panel B: deaths recorded in only one source
+fig_1_discordant <- fig_1_data |>
+  filter(
+    death_source %in% c("ONS_only", "TPP_only"),
+    death_date_ref_year > 2018
+  ) |>
+  mutate(
+    death_source = factor(
+      death_source,
+      levels = c("ONS_only", "TPP_only")
+    )
+  )
+
+p_fig_1_discordant <- ggplot(
+  fig_1_discordant,
+  aes(x = death_date_ref_year, y = total, fill = death_source)
+) +
+  geom_col(
+    position = "dodge",
+    color = "white",
+    linewidth = 0.2
+  ) +
+  scale_fill_manual(
+    values = c(
+      "ONS_only" = "#648FFF",
+      "TPP_only" = "#DC267F"
+    ),
+    labels = c(
+      "ONS_only" = "ONS only",
+      "TPP_only" = "TPP-pcEHR dated only"
+    ),
+    name = NULL
+  ) +
+  labs(
+    x = "Year of death",
+    y = "Deaths",
+    title = "(B)"
+  ) +
+  theme_fig_1
+
+fig_1 <- p_fig_1_all / p_fig_1_discordant
+fig_1
+```
+
+
+```{r}
+# =====================================================
+# Monthly source breakdown for 2025-2026
+# =====================================================
+
+table_paper_3 <- table_death_source_25_26 |>
+  mutate(year = year(month)) |>
+  group_by(year, month, death_source) |>
+  summarise(
+    n = sum(total, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  group_by(year, month) |>
+  mutate(
+    N = sum(n),
+    perc = round(100 * n / N, 1),
+    value = sprintf("%.1f%% (%s/%s)", perc, n, N)
+  ) |>
+  ungroup() |>
+  select(year, month, death_source, value) |>
+  pivot_wider(
+    names_from = death_source,
+    values_from = value
+  ) |>
+  rename(
+    `ONS & TPP-pcEHR` = Both,
+    `Only ONS` = ONS_only,
+    `Only TPP-pcEHR` = TPP_only
+  ) |>
+  mutate(
+    month = format(month, "%b")
+  ) |>
+  arrange(year, month) |>
+  select(year, month, `ONS & TPP-pcEHR`, `Only ONS`, `Only TPP-pcEHR`)
+
+table_paper_3
+```
+
+
+```{r}
+# =====================================================
+# TPP-pcEHR deaths: coded vs dated
+# =====================================================
+
+fig_tpp_codes <- tpp_death_code_or_date |>
+  filter(
+    !is.na(tpp_date_or_coded),
+    death_date_ref_year_w_tpp_codes < 2026
+  ) |>
+  mutate(
+    tpp_date_or_coded = factor(
+      tpp_date_or_coded,
+      levels = c(
+        "tpp_dated_and_coded",
+        "tpp_dated_only",
+        "tpp_coded_only"
+      ),
+      labels = c(
+        "TPP-pcEHR dated & coded",
+        "TPP-pcEHR dated only",
+        "TPP-pcEHR coded only"
+      )
+    )
+  )
+
+p_tpp_codes <- ggplot(
+  fig_tpp_codes,
+  aes(
+    x = death_date_ref_year_w_tpp_codes,
+    y = total,
+    fill = tpp_date_or_coded
+  )
+) +
+  geom_col(
+    position = "stack",
+    color = "white",
+    linewidth = 0.2
+  ) +
+  scale_fill_manual(
+    values = c(
+      "TPP-pcEHR dated & coded" = "#F28E2B",
+      "TPP-pcEHR dated only" = "#D81B60",
+      "TPP-pcEHR coded only" = "#FDD835"
+    ),
+    name = NULL
+  ) +
+  labs(
+    x = "Year of death",
+    y = "Number of deaths",
+    title = "(A)"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+p_tpp_codes
+```
+
+```{r}
+# =====================================================
+# Table: source classification with and without TPP coded deaths
+# =====================================================
+
+table_source_classification <- bind_rows(
+  table_death_source_overall_any_tpp |>
+    filter(
+      death_date_ref_year_w_tpp_codes >= 2019,
+      death_date_ref_year_w_tpp_codes <= 2025
+    ) |>
+    transmute(
+      year = death_date_ref_year_w_tpp_codes,
+      classification = "Including TPP dated or coded deaths",
+      source = case_when(
+        death_source_tpp_date_or_coded == "Both" ~ "ONS & TPP-pcEHR",
+        death_source_tpp_date_or_coded == "ONS_only" ~ "ONS only",
+        death_source_tpp_date_or_coded == "TPP_only" ~ "TPP-pcEHR only"
+      ),
+      n = total,
+      N = total_year
+    ),
+  fig_1_data |>
+    filter(
+      death_date_ref_year >= 2019,
+      death_date_ref_year <= 2025
+    ) |>
+    transmute(
+      year = death_date_ref_year,
+      classification = "Using TPP date only",
+      source = case_when(
+        death_source == "Both" ~ "ONS & TPP-pcEHR",
+        death_source == "ONS_only" ~ "ONS only",
+        death_source == "TPP_only" ~ "TPP-pcEHR only"
+      ),
+      n = total,
+      N = total_subgroup_value
+    )
+) |>
+  mutate(
+    source = factor(
+      source,
+      levels = c("ONS & TPP-pcEHR", "ONS only", "TPP-pcEHR only")
+    ),
+    perc = round(100 * n / N, 1),
+    value = sprintf("%.1f%% (%s/%s)", perc, n, N)
+  ) |>
+  select(classification, year, source, value) |>
+  pivot_wider(
+    names_from = source,
+    values_from = value
+  ) |>
+  arrange(classification, year)
+
+table_source_classification
+```
+
+
+```{r}
+# =====================================================
+# Deaths recorded only in ONS, by subgroup
+# =====================================================
+
+fig_ons_only_subgroups <- table_death_source |>
+  filter(
+    death_source == "ONS_only",
+    death_date_ref_year >= 2020,
+    death_date_ref_year <= 2025,
+    subgroup != "overall",
+    !is.na(perc)
+  )
+
+theme_subgroup <- theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 0, hjust = 0.5)
+  )
+
+scale_x_subgroup <- scale_x_continuous(
+  breaks = 2020:2025
+)
+
+scale_y_subgroup <- scale_y_continuous(
+  limits = c(0, 20),
+  breaks = seq(0, 20, by = 5),
+  labels = \(x) paste0(x, "%")
+)
+
+# Age band
+p_age_band <- fig_ons_only_subgroups |>
+  filter(subgroup == "age_band") |>
+  ggplot(aes(x = death_date_ref_year, y = perc, group = subgroup_value, color = subgroup_value)) +
+  geom_line(linewidth = 0.8) +
+  geom_point(size = 1.8) +
+  scale_x_subgroup +
+  scale_y_subgroup +
+  labs(
+    x = "Year of death",
+    y = "Deaths recorded only in ONS (%)",
+    color = "Age band"
+  ) +
+  theme_subgroup
+
+# Sex
+p_sex <- fig_ons_only_subgroups |>
+  filter(subgroup == "sex") |>
+  ggplot(aes(x = death_date_ref_year, y = perc, group = subgroup_value, color = subgroup_value)) +
+  geom_line(linewidth = 0.8) +
+  geom_point(size = 1.8) +
+  scale_x_subgroup +
+  scale_y_subgroup +
+  labs(
+    x = "Year of death",
+    y = "Deaths recorded only in ONS (%)",
+    color = "Sex"
+  ) +
+  theme_subgroup
+
+# Ethnicity
+p_ethnicity <- fig_ons_only_subgroups |>
+  filter(subgroup == "ethnicity") |>
+  ggplot(aes(x = death_date_ref_year, y = perc, group = subgroup_value, color = subgroup_value)) +
+  geom_line(linewidth = 0.8) +
+  geom_point(size = 1.8) +
+  scale_x_subgroup +
+  scale_y_subgroup +
+  labs(
+    x = "Year of death",
+    y = "Deaths recorded only in ONS (%)",
+    color = "Ethnicity"
+  ) +
+  theme_subgroup
+
+# IMD quintile
+p_imd <- fig_ons_only_subgroups |>
+  filter(subgroup == "imd_quintile") |>
+  ggplot(aes(x = death_date_ref_year, y = perc, group = subgroup_value, color = subgroup_value)) +
+  geom_line(linewidth = 0.8) +
+  geom_point(size = 1.8) +
+  scale_x_subgroup +
+  scale_y_subgroup +
+  labs(
+    x = "Year of death",
+    y = "Deaths recorded only in ONS (%)",
+    color = "IMD quintile"
+  ) +
+  theme_subgroup
+
+# Rural/urban
+p_rural_urban <- fig_ons_only_subgroups |>
+  filter(subgroup == "rural_urban") |>
+  ggplot(aes(x = death_date_ref_year, y = perc, group = subgroup_value, color = subgroup_value)) +
+  geom_line(linewidth = 0.8) +
+  geom_point(size = 1.8) +
+  scale_x_subgroup +
+  scale_y_subgroup +
+  labs(
+    x = "Year of death",
+    y = "Deaths recorded only in ONS (%)",
+    color = "Rural/urban"
+  ) +
+  theme_subgroup
+
+# Region
+p_region <- fig_ons_only_subgroups |>
+  filter(subgroup == "region") |>
+  ggplot(aes(x = death_date_ref_year, y = perc, group = subgroup_value, color = subgroup_value)) +
+  geom_line(linewidth = 0.8) +
+  geom_point(size = 1.8) +
+  scale_x_subgroup +
+  scale_y_subgroup +
+  labs(
+    x = "Year of death",
+    y = "Deaths recorded only in ONS (%)",
+    color = "Region"
+  ) +
+  theme_subgroup
+```
+
+
+```{r}
+# =====================================================
+# Difference in date of death between ONS and TPP-pcEHR
+# =====================================================
+
+table_dod_diff_3cats <- table_ons_tpp_dates_diff |>
+  filter(
+    subgroup == "overall",
+    subgroup_value == "All",
+    death_date_ref_year %in% 2020:2025
+  ) |>
+  mutate(
+    dod_diff_3cat = case_when(
+      dod_diff_groups == "0" ~ "Same day",
+      dod_diff_groups %in% c("-1 to -7", "1-7") ~ "Within 7 days",
+      dod_diff_groups %in% c("-8 to -30", "-31+", "8-30", "31+") ~ "More than 7 days",
+      TRUE ~ NA_character_
+    )
+  ) |>
+  filter(!is.na(dod_diff_3cat)) |>
+  group_by(death_date_ref_year, dod_diff_3cat) |>
+  summarise(
+    total = sum(total, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  group_by(death_date_ref_year) |>
+  mutate(
+    total_year = sum(total, na.rm = TRUE),
+    perc = total / total_year * 100,
+    dod_diff_3cat = factor(
+      dod_diff_3cat,
+      levels = c("Same day", "Within 7 days", "More than 7 days")
+    )
+  ) |>
+  ungroup()
+
+ggplot(
+  table_dod_diff_3cats,
+  aes(
+    x = factor(death_date_ref_year),
+    y = perc,
+    fill = dod_diff_3cat
+  )
+) +
+  geom_col(width = 0.8) +
+  scale_y_continuous(
+    labels = \(x) paste0(x, "%")
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Same day" = "#44aa99",
+      "Within 7 days" = "#88ccee",
+      "More than 7 days" = "#ddcc77"
+    ),
+    name = NULL
+  ) +
+  labs(
+    x = "Year of death",
+    y = "Percentage"
+  ) +
+  theme_minimal()
+
+```
+
+```{r}
+# =====================================================
+# Distribution of ONS-only deaths across practices (deciles)
+# =====================================================
+
+practice_deciles_ons_perc <- ggplot(
+  table_practice_percentiles,
+  aes(
+    x = year,
+    y = value,
+    group = percentile,
+    linetype = line_group,
+    color = line_group,
+    linewidth = line_group
+  )
+) +
+  geom_line() +
+
+  # Aesthetics: median vs deciles
+  scale_color_manual(
+    values = c(decile = "grey60", median = "black")
+  ) +
+  scale_linetype_manual(
+    values = c(decile = "dashed", median = "solid")
+  ) +
+  scale_linewidth_manual(
+    values = c(decile = 0.3, median = 0.9)
+  ) +
+
+  # Axes
+  scale_x_continuous(
+    breaks = sort(unique(table_practice_percentiles$year))
+  ) +
+  scale_y_continuous(
+    labels = \(x) paste0(x, "%")
+  ) +
+
+  labs(
+    title = "% of deaths recorded only in ONS across practices",
+    subtitle = paste0(
+      "Practices per year (≥10 deaths): ",
+      paste(
+        with(
+          distinct(table_practice_percentiles, year, n_practices),
+          paste0(year, "=", n_practices)
+        ),
+        collapse = " · "
+      )
+    ),
+    x = "Year",
+    y = "ONS-only deaths (%)",
+    color = NULL,
+    linetype = NULL,
+    linewidth = NULL
+  ) +
+
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "bottom",
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+practice_deciles_ons_perc
+```
+

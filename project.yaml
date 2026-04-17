@@ -1,91 +1,63 @@
-version: '4.0'
+version: '5.0'
 
 actions:
-#Dataset for diff time
-  dataset_death_TPP_ONS:
-    run: ehrql:v1 generate-dataset analysis/dataset_def/dataset_definition.py --output output/highly_sensitive/dataset_death_TPP_ONS.csv.gz
+
+  dataset_death_raw:
+    run: ehrql:v1 generate-dataset analysis/dataset_def/dataset_definition.py 
+      --output output/highly_sensitive/dataset_death_TPP_ONS.csv.gz
     outputs:
       highly_sensitive:
         dataset: output/highly_sensitive/dataset_death_TPP_ONS.csv.gz
-  
-  summary_stat:
-    run: r:v2 analysis/1_summary_stats.R
-      --output output/summary_stats/*.csv 
-    needs: [dataset_death_TPP_ONS]
-    outputs:
-      moderately_sensitive:
-        tables: output/summary_stats/*.csv
 
-  reg_dereg_ONS_TPP:
-    run: r:v2 analysis/2_tables_ONS_TPP_reg_dereg.R 
-      --output output/report/reg_dereg_ONS_TPP/*.csv 
-    needs: [dataset_death_TPP_ONS]
-    outputs:
-      moderately_sensitive:
-        csv: output/report/reg_dereg_ONS_TPP/*.csv
-
-  Dataset_source_dod_diff_processed:
-    run: r:v2 analysis/3_dataset_DoD_TPP_ONS_with_grace_period.R
-      --output output/highly_sensitive/DoD_TPP_ONS_with_grace_period.csv
-    needs: [dataset_death_TPP_ONS]
+  dataset_death_processed:
+    run: r:v2 analysis/1_derive_key_variables.R 
+    needs: [dataset_death_raw]
     outputs:
       highly_sensitive:
-        csv: output/highly_sensitive/DoD_TPP_ONS_with_grace_period.csv
+        csv: output/highly_sensitive/death_registration_processed.csv.gz
+      moderately_sensitive:
+        txt: output/analysis_tables/death_registration_processed_skim.txt
+        csv: output/analysis_tables/table_source_raw.csv
 
-  death_source:
-    run: r:v2 analysis/4_source_prop.R
-      --output output/report/by_source/*.csv 
-    needs: [Dataset_source_dod_diff_processed]
+
+  report_implausible_death_dates:
+    run: r:v2 analysis/2_implausible_death_dates.R 
+    needs: [dataset_death_processed]
     outputs:
       moderately_sensitive:
-        csv: output/report/by_source/*.csv
+        death_implausible_source: output/analysis_tables/death_implausible_source.csv
 
-  DoD_difference:
-    run: r:v2 analysis/5_DoD_diff.R
-      --output output/report/DoD_diff/*.csv 
-    needs: [Dataset_source_dod_diff_processed]
+  report_registration_at_death:
+    run: r:v2 analysis/3_registration_at_death.R 
+    needs: [dataset_death_processed]
     outputs:
       moderately_sensitive:
-        csv: output/report/DoD_diff/*.csv
-        
-# Measures
-  # measures_overall:
-  #   run: ehrql:v1 generate-measures analysis/measure_def.py 
-  #     --output output/measures/measures_overall.csv
-  #   outputs:
-  #     moderately_sensitive:
-  #       measure_csv: output/measures/measures_overall.csv
+        registration_status_source: output/analysis_tables/registration_status_source.csv 
+        reg_start_timing_source: output/analysis_tables/reg_start_timing_source.csv
+        reg_end_timing_source: output/analysis_tables/reg_end_timing_source.csv
+
+  report_death_source_comparison:
+    run: r:v2 analysis/4_death_source_comparison.R 
+    needs: [dataset_death_processed]
+    outputs:
+      moderately_sensitive:
+        table_death_source: output/analysis_tables/table_death_source.csv
+        table_death_source_25_26: output/analysis_tables/table_death_source_25_26.csv
+        tpp_death_code_or_date: output/analysis_tables/tpp_death_code_or_date.csv
+        table_death_source_overall_any_tpp: output/analysis_tables/table_death_source_any_tpp.csv
+
+  report_sources_date_agreement:
+    run: r:v2 analysis/5_sources_date_agreement.R 
+    needs: [dataset_death_processed]
+    outputs:
+      moderately_sensitive:
+        table_ons_tpp_dates_diff: output/analysis_tables/table_ons_tpp_dates_diff.csv
   
-  # table_measure_rate:
-  #   run: r:v2 analysis/Table_measure_rate.R
-  #     --output output/report/*.csv 
-  #   needs: [measures_overall]
-  #   outputs:
-  #     moderately_sensitive:
-  #       categorical: output/report/collate_measures_rate_table.csv
-
-  measures_by_practice:
-    run: ehrql:v1 generate-measures analysis/dataset_def/measure_practice.py 
-      --output output/highly_sensitive/measures_by_practice.csv
-    outputs:
-      highly_sensitive:
-        measure_csv: output/highly_sensitive/measures_by_practice.csv
-
-  decile_table_figure:
-    run:  r:v2 analysis/6_practice_by_source.R
-    needs: [measures_by_practice]
+  report_variation_source_by_practice:
+    run: r:v2 analysis/6_variation_source_by_practice.R 
+    needs: [dataset_death_processed]
     outputs:
       moderately_sensitive:
-        csv: output/report/source_by_practice/*.csv
-        png: output/report/source_by_practice/*.png  
-
-
-  # visualization:
-  #   run:  r:v2 Final-visualizations.R
-  #   needs: [table_DoD]
-  #   outputs:
-  #     moderately_sensitive:
-  #       csv: output/final_visualization/*.csv
-  #       png: output/final_visualization/*.png 
-
-#
+        table_practice_percentiles: output/analysis_tables/table_practice_percentiles.csv
+  
+# end---- 
