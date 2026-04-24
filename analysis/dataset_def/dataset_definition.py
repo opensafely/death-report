@@ -43,7 +43,7 @@ tpp_coded_death_event = (
     clinical_events
     .where(clinical_events.snomedct_code.is_in(tpp_coded_death_codes))
     .sort_by(clinical_events.date)
-    .last_for_patient()
+    .first_for_patient()
 )
 
 has_tpp_coded_death = tpp_coded_death_event.date.is_not_null()
@@ -73,12 +73,12 @@ age_at_death = patients.age_on(ref_death_date)
 # Keep plausible ages only.
 # Also retain infants aged <1 year, whose integer age may be recorded as 0.
 has_possible_age = (
-    ((age_at_death > 0) & (age_at_death < 110))
+    ((age_at_death >= 0) & (age_at_death < 110))
     | (patients.date_of_birth.year == ref_death_date.year)
 )
 
 # Restrict to male/female categories for disclosure control -----------------------
-has_disclosive_sex = (
+has_non_disclosive_sex = (
     (patients.sex == "male")
     | (patients.sex == "female")
 )
@@ -87,7 +87,7 @@ has_disclosive_sex = (
 dataset.define_population(
     has_any_death
     & has_possible_age
-    & has_disclosive_sex
+    & has_non_disclosive_sex
 )
 
 # -----------------------------------------------------------------------------

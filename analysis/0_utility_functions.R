@@ -102,25 +102,17 @@ cat_last_reg_start_to_death <- function(days) {
 cat_last_reg_end_minus_death <- function(days) {
   case_when(
     is.na(days) ~ "missing_registration_end",
-    days <= -31 ~ "<-31",
-    days >= -30 & days <= -8 ~ "-30_to_-8",
-    days >= -7 & days <= -1 ~ "-7_to_-1",
+    days <= -31 ~ "-31+",
+    days >= -30 & days <= -8 ~ "-30 to -8",
+    days >= -7 & days <= -1 ~ "-7 to -1",
     days == 0 ~ "0",
-    days >= 1 & days <= 7 ~ "1_to_7",
-    days >= 8 & days <= 30 ~ "8_to_30",
+    days >= 1 & days <= 7 ~ "1 to 7",
+    days >= 8 & days <= 30 ~ "8 to 30",
     days >= 31 ~ "31+"
   ) |>
     factor(
-      levels = c(
-        "<-31",
-        "-30_to_-8",
-        "-7_to_-1",
-        "0",
-        "1_to_7",
-        "8_to_30",
-        "31+",
-        "missing_registration_end"
-      ),
+      levels = c("-31+", "-8 to -30", "-1 to -7", "0", "1 to 7", "8 to 30", "31+", 
+      "missing_registration_end"),
       ordered = TRUE
     )
 }
@@ -232,8 +224,8 @@ add_dod_diff_vars <- function(data) {
 
         diff_dod == 0 ~ "0",
 
-        diff_dod >= 1  & diff_dod <= 7  ~ "1-7",
-        diff_dod >= 8  & diff_dod <= 30 ~ "8-30",
+        diff_dod >= 1  & diff_dod <= 7  ~ "1 to 7",
+        diff_dod >= 8  & diff_dod <= 30 ~ "8 to 30",
         diff_dod >= 31                  ~ "31+",
 
         diff_dod <= -1 & diff_dod >= -7  ~ "-1 to -7",
@@ -244,7 +236,7 @@ add_dod_diff_vars <- function(data) {
       # convert to ordered factor for consistent display
       dod_diff_groups = factor(
         dod_diff_groups,
-        levels = c("-31+", "-8 to -30", "-1 to -7", "0", "1-7", "8-30", "31+"),
+        levels = c("-31+", "-8 to -30", "-1 to -7", "0", "1 to 7", "8 to 30", "31+"),
         ordered = TRUE
       )
     )

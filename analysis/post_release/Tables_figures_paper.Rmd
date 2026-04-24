@@ -255,7 +255,7 @@ p_fig_1_discordant <- ggplot(
   ) +
   labs(
     x = "Year of death",
-    y = "Deaths",
+    y = "Number of Deaths",
     title = "(B)"
   ) +
   theme_fig_1
@@ -559,7 +559,7 @@ table_dod_diff_3cats <- table_ons_tpp_dates_diff |>
     dod_diff_3cat = case_when(
       dod_diff_groups == "0" ~ "Same day",
       dod_diff_groups %in% c("-1 to -7", "1-7") ~ "Within 7 days",
-      dod_diff_groups %in% c("-8 to -30", "-31+", "8-30", "31+") ~ "More than 7 days",
+      dod_diff_groups %in% c("-8 to -30", "-31+", "8 to 30", "31+") ~ "More than 7 days",
       TRUE ~ NA_character_
     )
   ) |>

@@ -124,12 +124,13 @@ table_source_raw <- death_registration_processed |>
   
   group_by(death_date_ref_year, death_source) |>
   summarise(
-    total = rounding(n()),  # SDC rounding
+    total = n(), 
     .groups = "drop"
   )|>
   group_by(death_date_ref_year) |>
   mutate(
-    total_year = sum(total, na.rm = TRUE),    
+    total_year = rounding(sum(total, na.rm = TRUE)),    
+    total = rounding(total),
     perc = total / total_year * 100          
   ) |>
   ungroup()
