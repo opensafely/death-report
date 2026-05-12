@@ -558,8 +558,8 @@ table_dod_diff_3cats <- table_ons_tpp_dates_diff |>
   mutate(
     dod_diff_3cat = case_when(
       dod_diff_groups == "0" ~ "Same day",
-      dod_diff_groups %in% c("-1 to -7", "1-7") ~ "Within 7 days",
-      dod_diff_groups %in% c("-8 to -30", "-31+", "8 to 30", "31+") ~ "More than 7 days",
+      dod_diff_groups %in% c("-7 to -1", "1-7") ~ "Within 7 days",
+      dod_diff_groups %in% c("-30 to -8", "-31+", "8 to 30", "31+") ~ "More than 7 days",
       TRUE ~ NA_character_
     )
   ) |>
@@ -568,7 +568,7 @@ table_dod_diff_3cats <- table_ons_tpp_dates_diff |>
   summarise(
     total = sum(total, na.rm = TRUE),
     .groups = "drop"
-  ) |>
+  ) |> 
   group_by(death_date_ref_year) |>
   mutate(
     total_year = sum(total, na.rm = TRUE),
