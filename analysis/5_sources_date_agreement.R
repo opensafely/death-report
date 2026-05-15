@@ -52,7 +52,7 @@ ons_tpp_dates_diff_analysis <- death_registration_processed |>
 table_ons_tpp_dates_diff_overall  <- ons_tpp_dates_diff_analysis |>
   group_by(death_date_ref_year, dod_diff_groups) |>
   summarise(
-    total = rounding(n()),  # SDC rounding
+    total = n(),  
     .groups = "drop"
   ) |>
   mutate(
@@ -79,7 +79,7 @@ table_ons_tpp_dates_diff_subgroups <- ons_tpp_dates_diff_analysis |>
   ) |>
   group_by(death_date_ref_year, dod_diff_groups, subgroup, subgroup_value) |>
   summarise(
-    total = rounding(n()),  # SDC rounding
+    total = n(), 
     .groups = "drop"
   )
 
@@ -104,8 +104,9 @@ table_ons_tpp_dates_diff <- bind_rows(
   ) |>
   group_by(death_date_ref_year, subgroup, subgroup_value) |>
   mutate(
-    total_subgroup_value = sum(total, na.rm = TRUE),             # denominator
-    perc = total / total_subgroup_value * 100           # proportion
+    total_subgroup_value = rounding(sum(total, na.rm = TRUE)),    
+    total = rounding(total),
+    perc = round(total / total_subgroup_value * 100, 1)          
   ) |>
   ungroup() |>
   arrange(death_date_ref_year, subgroup, subgroup_value, dod_diff_groups) |>

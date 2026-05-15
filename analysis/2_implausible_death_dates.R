@@ -74,10 +74,15 @@ death_implausible_source <- death_registration_processed |>
   
   # Aggregate counts by year, source, and plausibility category
   group_by(death_date_ref_year, source, cat_death_date_plausi) |>
-  
   summarise(
-    total = rounding(n()), # SDC rounding
+    total = n(), 
     .groups = "drop"
+  )|>
+  group_by(death_date_ref_year, source) |>
+  mutate(
+    total_year = rounding(sum(total, na.rm = TRUE)),    
+    total = rounding(total),
+    perc = round(total / total_year * 100, 1)          
   ) |>
   
   arrange(death_date_ref_year, source, cat_death_date_plausi)

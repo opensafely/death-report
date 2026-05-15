@@ -131,7 +131,7 @@ table_source_raw <- death_registration_processed |>
   mutate(
     total_year = rounding(sum(total, na.rm = TRUE)),    
     total = rounding(total),
-    perc = total / total_year * 100          
+    perc = round(total / total_year * 100, 1)          
   ) |>
   ungroup()
 

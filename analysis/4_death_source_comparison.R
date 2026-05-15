@@ -53,7 +53,7 @@ death_registration_analysis <- death_registration_processed |>
 table_death_source_overall <- death_registration_analysis |>
   group_by(death_date_ref_year, death_source) |>
   summarise(
-    total = rounding(n()),  # SDC rounding
+    total = n(),
     .groups = "drop"
   ) |>
   mutate(
@@ -80,7 +80,7 @@ table_death_source_subgroups <- death_registration_analysis |>
   ) |>
   group_by(death_date_ref_year, death_source, subgroup, subgroup_value) |>
   summarise(
-    total = rounding(n()),  # SDC rounding
+    total = n(), 
     .groups = "drop"
   )
 
@@ -105,8 +105,9 @@ table_death_source <- bind_rows(
   ) |>
   group_by(death_date_ref_year, subgroup, subgroup_value) |>
   mutate(
-    total_subgroup_value = sum(total, na.rm = TRUE),             # denominator
-    perc = total / total_subgroup_value * 100           # proportion
+    total_subgroup_value = rounding(sum(total, na.rm = TRUE)),  
+    total = rounding(total),
+    perc = round(total / total_subgroup_value * 100,1)        
   ) |>
   ungroup() |>
   arrange(death_date_ref_year, subgroup, subgroup_value, death_source) |>
@@ -133,9 +134,15 @@ table_death_source_25_26 <- death_registration_analysis |>
   filter(death_date_ref_year > 2024) |>
   group_by(month = floor_date(death_date_ref, unit = "month"), death_source) |>
   summarise(
-    total = rounding(n()),  # SDC rounding
+    total = n(), 
     .groups = "drop"
-  ) 
+  )|>
+  group_by(month, death_source) |>
+  mutate(
+    total_year = rounding(sum(total, na.rm = TRUE)),    
+    total = rounding(total),
+    perc = round(total / total_year * 100, 1)          
+  )
 
 # Export lasts months analysis table ----
 write_csv(
@@ -154,8 +161,14 @@ write_csv(
 tpp_death_code_or_date <- death_registration_processed |>
   group_by(death_date_ref_year_w_tpp_codes, tpp_date_or_coded) |>
   summarise(
-    total = rounding(n()),  # SDC rounding
+    total = n(), 
     .groups = "drop"
+  )|>
+  group_by(death_date_ref_year_w_tpp_codes) |>
+  mutate(
+    total_year = rounding(sum(total, na.rm = TRUE)),    
+    total = rounding(total),
+    perc = round(total / total_year * 100, 1)          
   ) |>
   arrange(death_date_ref_year_w_tpp_codes, tpp_date_or_coded)
 
@@ -170,13 +183,14 @@ write_csv(
 table_death_source_overall_any_tpp <- death_registration_analysis |>
   group_by(death_date_ref_year_w_tpp_codes, death_source_tpp_date_or_coded) |>
   summarise(
-    total = rounding(n()),  # SDC rounding
+    total = n(), 
     .groups = "drop"
   )|>
   group_by(death_date_ref_year_w_tpp_codes) |>
   mutate(
-    total_year = sum(total, na.rm = TRUE),            
-    perc = total / total_year * 100          
+    total_year = rounding(sum(total, na.rm = TRUE)),    
+    total = rounding(total),
+    perc = round(total / total_year * 100, 1)          
   ) |>
   ungroup() |>
   arrange(death_date_ref_year_w_tpp_codes, death_source_tpp_date_or_coded) |>
