@@ -10,29 +10,32 @@
 #
 #########################################################################
 
-# Libraries ----
+# Libraries 
 library(tidyverse)
 library(here)
 library(fs)
 library(lubridate)
 
-# Create output directory ----
+# Create output directory 
 output_dir_analysis_tables <- here("output", "analysis_tables")
 dir_create(output_dir_analysis_tables)
 
-# Import utility functions ----
+# Import utility functions 
 source(here("analysis", "0_utility_functions.R"))
 
-# Import data ----
+# Import data 
 death_registration_processed <- read_csv(
   here("output", "highly_sensitive", "death_registration_processed.csv.gz")
 )
 
-# ==================================================
-# Main analysis: dated deaths only
-# ==================================================
 
-# Restrict to the main analysis population
+# Main analysis: dated deaths only -------
+
+
+# Restrict to the main analysis population:
+# - has at least one recorded death date
+# - does not have an implausible death date
+# - was registered with a practice
 death_registration_analysis <- death_registration_processed |>
   filter(
     flag_any_date_death == TRUE,
@@ -41,45 +44,84 @@ death_registration_analysis <- death_registration_processed |>
   )
 
 # ==================================================
-# Practice-level % of deaths recorded only in ONS
-# Includes practices with 0% ONS only
+# Practice-level % of deaths by death source
 # ==================================================
 
-practice_ons_only <- death_registration_analysis |>
-  group_by(death_date_ref_year, practice) |>
-  summarise(
-    total_practice_year = n(),
-    ons_only_n = sum(death_source == "ONS_only", na.rm = TRUE),
-    perc_ons_only = 100 * ons_only_n / total_practice_year,
-    .groups = "drop"
+# This calculates, for each practice-year:
+# - the total number of deaths
+# - the number of deaths from each death source
+# - the percentage of deaths from each death source
+#
+# Calculates the distribution separately for each source
+
+practice_death_source <- death_registration_analysis |>
+  
+  count(
+    death_date_ref_year,
+    practice,
+    death_source,
+    name = "death_source_n"
   ) |>
-  filter(total_practice_year > 9) |>
+  
+  group_by(death_date_ref_year, practice) |>
+  
+  complete(
+    death_source = c("ONS_only", "TPP_only", "Both"),
+    fill = list(death_source_n = 0)
+  ) |>
+  
+  mutate(
+    total_practice_year = sum(death_source_n),
+    perc_death_source =
+      100 * death_source_n / total_practice_year
+  ) |>
+  
+  ungroup() |>
+  
+  filter(total_practice_year > 30) |>
+  
   rename(year = death_date_ref_year)
 
+
 # ==================================================
-# Practice-level percentiles of % ONS-only deaths
-# Long format for plotting
+# Practice-level percentiles by death source
 # ==================================================
 
+# Define the percentiles to calculate:
+# 10th, 20th, ..., 90th percentile
 probs <- seq(0.1, 0.9, by = 0.1)
 percentiles <- probs * 100
 
-n_by_year <- practice_ons_only |>
+# Count number of practices contributing to each year.
+# This is calculated once per year, not separately by death source,
+# because the same set of practice-years contributes to each source.
+n_by_year <- practice_death_source |>
   group_by(year) |>
   summarise(
     n_practices = rounding(n_distinct(practice)),
     .groups = "drop"
   )
 
-table_practice_percentiles <- practice_ons_only |>
-  group_by(year) |>
+# Calculate percentiles of practice-level percentages.
+#
+# For each year and death source, this summarises the distribution of
+# practice-level percentages across practices.
+#
+table_practice_percentiles <- practice_death_source |>
+  group_by(year, death_source) |>
   summarise(
     value = list(
-      round(as.numeric(quantile(
-        perc_ons_only,
-        probs = probs,
-        na.rm = TRUE,
-        type = 3)), 1)
+      round(
+        as.numeric(
+          quantile(
+            perc_death_source,
+            probs = probs,
+            na.rm = TRUE,
+            type = 3
+          )
+        ),
+        1
+      )
     ),
     percentile = list(percentiles),
     .groups = "drop"
@@ -89,13 +131,21 @@ table_practice_percentiles <- practice_ons_only |>
   mutate(
     line_group = if_else(percentile == 50, "median", "decile")
   ) |>
-  select(year, n_practices, percentile, value, line_group) |>
-  arrange(year, percentile)
+  select(
+    year,
+    death_source,
+    n_practices,
+    percentile,
+    value,
+    line_group
+  ) |>
+  arrange(year, death_source, percentile)
 
+# View output ----
 table_practice_percentiles
 
 # Export main analysis table ----
 write_csv(
   table_practice_percentiles,
-  here(output_dir_analysis_tables, "table_practice_percentiles.csv")
+  here(output_dir_analysis_tables, "table_practice_percentiles_by_death_source.csv")
 )
