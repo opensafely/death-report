@@ -58,6 +58,6 @@ actions:
     needs: [dataset_death_processed]
     outputs:
       moderately_sensitive:
-        table_practice_percentiles: output/analysis_tables/table_practice_percentiles.csv
+        table_practice_percentiles: output/analysis_tables/table_practice_percentiles_by_death_source.csv
   
 # end---- 
