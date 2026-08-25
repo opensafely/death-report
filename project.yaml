@@ -34,24 +34,33 @@ actions:
       moderately_sensitive:
         registration_status_source: output/analysis_tables/registration_status_source.csv 
         reg_start_timing_source: output/analysis_tables/reg_start_timing_source.csv
-        reg_end_timing_source: output/analysis_tables/reg_end_timing_source.csv
+        reg_end_timing_source_subgroups: output/analysis_tables/reg_end_timing_source_subgroups.csv
 
-  report_death_source_comparison:
-    run: r:v2 analysis/4_death_source_comparison.R 
+  # report_death_source_comparison:
+  #   run: r:v2 analysis/4_death_source_comparison.R 
+  #   needs: [dataset_death_processed]
+  #   outputs:
+  #     moderately_sensitive:
+  #       table_death_source: output/analysis_tables/table_death_source.csv
+  #       table_death_source_25_26: output/analysis_tables/table_death_source_25_26.csv
+  #       tpp_death_code_or_date: output/analysis_tables/tpp_death_code_or_date.csv
+  #       table_death_source_overall_any_tpp: output/analysis_tables/table_death_source_overall_any_tpp.csv
+
+  # report_sources_date_agreement:
+  #   run: r:v2 analysis/5_sources_date_agreement.R 
+  #   needs: [dataset_death_processed]
+  #   outputs:
+  #     moderately_sensitive:
+  #       table_ons_tpp_dates_diff: output/analysis_tables/table_ons_tpp_dates_diff.csv
+  
+  report_death_source_plus_date_agreement:
+    run: r:v2 analysis/4_5_together_source_subgroups.R 
     needs: [dataset_death_processed]
     outputs:
       moderately_sensitive:
-        table_death_source: output/analysis_tables/table_death_source.csv
+        table_date_agreement_source_subgroups: output/analysis_tables/table_date_agreement_source_subgroups.csv
         table_death_source_25_26: output/analysis_tables/table_death_source_25_26.csv
-        tpp_death_code_or_date: output/analysis_tables/tpp_death_code_or_date.csv
-        table_death_source_overall_any_tpp: output/analysis_tables/table_death_source_overall_any_tpp.csv
-
-  report_sources_date_agreement:
-    run: r:v2 analysis/5_sources_date_agreement.R 
-    needs: [dataset_death_processed]
-    outputs:
-      moderately_sensitive:
-        table_ons_tpp_dates_diff: output/analysis_tables/table_ons_tpp_dates_diff.csv
+        table_tpp_coded_ons_dates_diff: output/analysis_tables/table_tpp_coded_ons_dates_diff.csv
   
   report_variation_source_by_practice:
     run: r:v2 analysis/6_variation_source_by_practice.R 
