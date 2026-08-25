@@ -38,77 +38,167 @@ death_registration_processed <- read_csv(
 # - was registered with a practice
 death_registration_analysis <- death_registration_processed |>
   filter(
+    death_date_ref_year >= 2020,
     flag_any_date_death == TRUE,
     flag_any_date_death_implausible == FALSE,
     flag_is_registered == TRUE
   )
 
 # ==================================================
-# Practice-level % of deaths by death source
+# Practice-level % of source-only deaths
 # ==================================================
 
-# This calculates, for each practice-year:
-# - the total number of deaths
-# - the number of deaths from each death source
-# - the percentage of deaths from each death source
+# For each practice-year:
+# - TPP_only is expressed as a percentage of all deaths recorded in TPP
+#   (TPP_only + Both)
+# - ONS_only is expressed as a percentage of all deaths recorded in ONS
+#   (ONS_only + Both)
+# - ONS_only_with_snomed and ONS_only_without_snomed are also expressed
+#   as percentages of all deaths recorded in ONS
 #
-# Calculates the distribution separately for each source
+# Practice-years with <=30 deaths recorded in either source are excluded.
 
-practice_death_source <- death_registration_analysis |>
+# ==================================================
+# Practice-level counts
+# ==================================================
+
+practice_death_source_counts <- death_registration_analysis |>
   
-  count(
+  group_by(
     death_date_ref_year,
-    practice,
-    death_source,
-    name = "death_source_n"
+    practice
   ) |>
   
-  group_by(death_date_ref_year, practice) |>
-  
-  complete(
-    death_source = c("ONS_only", "TPP_only", "Both"),
-    fill = list(death_source_n = 0)
+  summarise(
+    n_both =
+      sum(death_source == "Both", na.rm = TRUE),
+    
+    n_tpp_only =
+      sum(death_source == "TPP_only", na.rm = TRUE),
+    
+    n_ons_only =
+      sum(death_source == "ONS_only", na.rm = TRUE),
+    
+    n_ons_only_with_snomed =
+      sum(
+        death_source == "ONS_only" &
+          !is.na(tpp_coded_death_date),
+        na.rm = TRUE
+      ),
+    
+    n_ons_only_without_snomed =
+      sum(
+        death_source == "ONS_only" &
+          is.na(tpp_coded_death_date),
+        na.rm = TRUE
+      ),
+    
+    .groups = "drop"
   ) |>
   
   mutate(
-    total_practice_year = sum(death_source_n),
-    perc_death_source =
-      100 * death_source_n / total_practice_year
+    # Check that ONS-only is fully partitioned
+    n_ons_only_unclassified =
+      n_ons_only -
+      n_ons_only_with_snomed -
+      n_ons_only_without_snomed,
+    
+    # Total deaths recorded in either source
+    total_practice_year =
+      n_both +
+      n_tpp_only +
+      n_ons_only,
+    
+    # Source-specific denominators
+    any_tpp =
+      n_both +
+      n_tpp_only,
+    
+    any_ons =
+      n_both +
+      n_ons_only
+  ) #|>
+  
+ # filter(total_practice_year > 30)
+
+
+# ==================================================
+# Practice-level percentages
+# ==================================================
+
+practice_death_source <- practice_death_source_counts |>
+  
+  transmute(
+    year = death_date_ref_year,
+    practice,
+    
+    TPP_only =
+      if_else(
+        any_tpp > 0,
+        100 * n_tpp_only / any_tpp,
+        NA_real_
+      ),
+    
+    ONS_only =
+      if_else(
+        any_ons > 0,
+        100 * n_ons_only / any_ons,
+        NA_real_
+      ),
+    
+    ONS_only_with_snomed =
+      if_else(
+        any_ons > 0,
+        100 * n_ons_only_with_snomed / any_ons,
+        NA_real_
+      ),
+    
+    ONS_only_without_snomed =
+      if_else(
+        any_ons > 0,
+        100 * n_ons_only_without_snomed / any_ons,
+        NA_real_
+      )
   ) |>
   
-  ungroup() |>
-  
-  filter(total_practice_year > 30) |>
-  
-  rename(year = death_date_ref_year)
+  pivot_longer(
+    cols = c(
+      TPP_only,
+      ONS_only,
+      ONS_only_with_snomed,
+      ONS_only_without_snomed
+    ),
+    names_to = "death_source",
+    values_to = "perc_death_source"
+  )
 
 
 # ==================================================
 # Practice-level percentiles by death source
 # ==================================================
 
-# Define the percentiles to calculate:
-# 10th, 20th, ..., 90th percentile
 probs <- seq(0.1, 0.9, by = 0.1)
 percentiles <- probs * 100
 
-# Count number of practices contributing to each year.
-# This is calculated once per year, not separately by death source,
-# because the same set of practice-years contributes to each source.
-n_by_year <- practice_death_source |>
-  group_by(year) |>
+
+# Number of practices contributing to each year
+n_by_year <- practice_death_source_counts |>
+  group_by(death_date_ref_year) |>
   summarise(
     n_practices = rounding(n_distinct(practice)),
     .groups = "drop"
-  )
+  ) |>
+  rename(year = death_date_ref_year)
 
-# Calculate percentiles of practice-level percentages.
-#
-# For each year and death source, this summarises the distribution of
-# practice-level percentages across practices.
-#
+
+# Calculate percentiles
 table_practice_percentiles <- practice_death_source |>
-  group_by(year, death_source) |>
+  
+  group_by(
+    year,
+    death_source
+  ) |>
+  
   summarise(
     value = list(
       round(
@@ -126,11 +216,25 @@ table_practice_percentiles <- practice_death_source |>
     percentile = list(percentiles),
     .groups = "drop"
   ) |>
-  unnest(c(percentile, value)) |>
-  left_join(n_by_year, by = "year") |>
-  mutate(
-    line_group = if_else(percentile == 50, "median", "decile")
+  
+  unnest(
+    c(percentile, value)
   ) |>
+  
+  left_join(
+    n_by_year,
+    by = "year"
+  ) |>
+  
+  mutate(
+    line_group =
+      if_else(
+        percentile == 50,
+        "median",
+        "decile"
+      )
+  ) |>
+  
   select(
     year,
     death_source,
@@ -139,13 +243,23 @@ table_practice_percentiles <- practice_death_source |>
     value,
     line_group
   ) |>
-  arrange(year, death_source, percentile)
+  
+  arrange(
+    year,
+    death_source,
+    percentile
+  )
+
 
 # View output ----
 table_practice_percentiles
 
-# Export main analysis table ----
+
+# Export ----
 write_csv(
   table_practice_percentiles,
-  here(output_dir_analysis_tables, "table_practice_percentiles_by_death_source.csv")
+  here(
+    output_dir_analysis_tables,
+    "table_practice_percentiles_by_death_source.csv"
+  )
 )

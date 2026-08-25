@@ -8,7 +8,7 @@
 # Steps:
 # 1) classify deaths by source: ONS only / TPP only / both
 # 2) define whether death occurred during registration
-#    - main analysis: includes 30-day grace period after registration end
+#    - main analysis: includes 28-day grace period after registration end
 #    - sensitivity analysis: no grace period
 # 3) among registered deaths, describe timing between:
 #    - registration start and death
@@ -82,7 +82,7 @@ death_registration_processed <- dataset_death_raw |>
       death_date = death_date_ref,
       reg_start = last_registration_start_date,
       reg_end = last_registration_end_date,
-      grace_days = 30
+      grace_days = 28
     ),
     
     # Registered flags
