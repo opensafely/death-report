@@ -87,30 +87,30 @@ write_csv(
 
 # Timing of last registration end relative to death, by year and death source ----
 # Exclude people whose registration started after death
-reg_end_timing_source <- death_registration_clean |>
-  filter(
-    reg_start_timing_group %in% c(
-      "same_day_as_registration_start",
-      "death_after_registration_start"
-    )
-  ) |>
-  group_by(death_date_ref_year, death_source, reg_end_timing_group) |>
-  summarise(
-    total = n(), 
-    .groups = "drop"
-  )|>
-  group_by(death_date_ref_year, death_source) |>
-  mutate(
-    total_year = rounding(sum(total, na.rm = TRUE)),    
-    total = rounding(total),
-    perc = round(total / total_year * 100, 1)          
-  ) |>
-  arrange(death_date_ref_year, death_source, reg_end_timing_group)
+# reg_end_timing_source <- death_registration_clean |>
+#   filter(
+#     reg_start_timing_group %in% c(
+#       "same_day_as_registration_start",
+#       "death_after_registration_start"
+#     )
+#   ) |>
+#   group_by(death_date_ref_year, death_source, reg_end_timing_group) |>
+#   summarise(
+#     total = n(), 
+#     .groups = "drop"
+#   )|>
+#   group_by(death_date_ref_year, death_source) |>
+#   mutate(
+#     total_year = rounding(sum(total, na.rm = TRUE)),    
+#     total = rounding(total),
+#     perc = round(total / total_year * 100, 1)          
+#   ) |>
+#   arrange(death_date_ref_year, death_source, reg_end_timing_group)
 
-write_csv(
-  reg_end_timing_source,
-  here(output_dir_analysis_tables, "reg_end_timing_source.csv")
-)
+# write_csv(
+#   reg_end_timing_source,
+#   here(output_dir_analysis_tables, "reg_end_timing_source.csv")
+# )
 
 
 # Timing of last registration end relative to death,
